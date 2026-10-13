@@ -1,0 +1,239 @@
+import React, { useState } from 'react';
+import { Routes, Route } from 'react-router-dom';
+import AdminSidebar from '../../components/Admin/AdminSidebar';
+import Employees from './Employees';
+
+function AdminReportsView() {
+  const [timeframe, setTimeframe] = useState('Monthly');
+  const [revenueFilter, setRevenueFilter] = useState('All Revenues');
+
+  return (
+    <div className="space-y-6">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <h2 className="text-2xl font-bold text-stone-900">Sales Dashboard</h2>
+          <p className="text-stone-500 text-sm mt-1">Overview of facility revenue and membership growth.</p>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="bg-white border border-stone-200 p-1 rounded-xl flex items-center shadow-sm text-xs font-semibold">
+            {['Daily', 'Monthly', 'Yearly'].map((item) => (
+              <button
+                key={item}
+                onClick={() => setTimeframe(item)}
+                className={`px-3.5 py-1.5 rounded-lg transition cursor-pointer ${
+                  timeframe === item ? 'bg-[#0A5C36] text-white' : 'text-stone-600 hover:bg-stone-100'
+                }`}
+              >
+                {item}
+              </button>
+            ))}
+          </div>
+
+          <div className="bg-white border border-stone-200 px-3.5 py-2 rounded-xl text-xs font-semibold text-stone-700 shadow-sm flex items-center space-x-2">
+            <svg className="w-4 h-4 text-stone-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+            </svg>
+            <span>Oct 01, 2024 - Oct 31, 2024</span>
+          </div>
+        </div>
+      </div>
+
+      <div className="flex items-center justify-between">
+        <select
+          value={revenueFilter}
+          onChange={(e) => setRevenueFilter(e.target.value)}
+          className="bg-white border border-stone-200 px-4 py-2 rounded-xl text-xs font-semibold text-stone-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-[#0A5C36]"
+        >
+          <option value="All Revenues">All Revenues</option>
+          <option value="Membership">Membership Revenue</option>
+          <option value="Walk-in">Daily / Walk-in Revenue</option>
+        </select>
+
+        <button className="bg-white border border-stone-200 hover:bg-stone-50 px-4 py-2 rounded-xl text-xs font-semibold text-stone-700 shadow-sm flex items-center space-x-2 transition cursor-pointer">
+          <svg className="w-4 h-4 text-stone-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+          </svg>
+          <span>Export CSV / PDF</span>
+        </button>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="bg-white p-6 rounded-2xl border border-stone-200 shadow-sm relative overflow-hidden">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-xs font-bold text-stone-400 uppercase tracking-wider">Total Earnings</span>
+            <div className="w-8 h-8 rounded-xl bg-emerald-50 text-[#0A5C36] flex items-center justify-center font-bold">
+              ₱
+            </div>
+          </div>
+          <h3 className="text-3xl font-extrabold text-stone-900 mt-1">₱124,500</h3>
+        </div>
+
+        <div className="bg-white p-6 rounded-2xl border border-stone-200 shadow-sm relative overflow-hidden">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-xs font-bold text-stone-400 uppercase tracking-wider">Membership Revenue</span>
+            <div className="w-8 h-8 rounded-xl bg-emerald-50 text-[#0A5C36] flex items-center justify-center">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0z" />
+              </svg>
+            </div>
+          </div>
+          <h3 className="text-3xl font-extrabold text-stone-900 mt-1">₱102,000</h3>
+        </div>
+
+        <div className="bg-white p-6 rounded-2xl border border-stone-200 shadow-sm relative overflow-hidden">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-xs font-bold text-stone-400 uppercase tracking-wider">Daily / Walk-in Revenue</span>
+            <div className="w-8 h-8 rounded-xl bg-orange-50 text-orange-600 flex items-center justify-center">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z" />
+              </svg>
+            </div>
+          </div>
+          <h3 className="text-3xl font-extrabold text-stone-900 mt-1">₱22,500</h3>
+        </div>
+      </div>
+
+      <div className="bg-white rounded-2xl border border-stone-200 shadow-sm p-6 space-y-6">
+        <div className="flex items-center justify-between">
+          <h3 className="font-bold text-stone-900 text-base">Revenue Breakdown Over Time</h3>
+          <div className="flex items-center space-x-4 text-xs font-semibold">
+            <div className="flex items-center space-x-1.5">
+              <span className="w-2.5 h-2.5 rounded-full bg-[#0A5C36]"></span>
+              <span className="text-stone-600">Membership</span>
+            </div>
+            <div className="flex items-center space-x-1.5">
+              <span className="w-2.5 h-2.5 rounded-full bg-orange-500"></span>
+              <span className="text-stone-600">Walk-In</span>
+            </div>
+          </div>
+        </div>
+
+        <div className="h-64 border-b border-stone-200 relative flex items-center justify-center px-4">
+          <svg className="w-full h-full overflow-visible" viewBox="0 0 700 200">
+            <line x1="0" y1="40" x2="700" y2="40" stroke="#f0f0ed" strokeWidth="1" strokeDasharray="4 4" />
+            <line x1="0" y1="100" x2="700" y2="100" stroke="#f0f0ed" strokeWidth="1" strokeDasharray="4 4" />
+            <line x1="0" y1="160" x2="700" y2="160" stroke="#f0f0ed" strokeWidth="1" strokeDasharray="4 4" />
+
+            <path 
+              d="M 50 130 Q 170 80, 290 90 T 530 50 T 650 30" 
+              fill="none" 
+              stroke="#0A5C36" 
+              strokeWidth="3" 
+            />
+
+            <path 
+              d="M 50 160 Q 170 140, 290 120 T 530 110 T 650 90" 
+              fill="none" 
+              stroke="#f97316" 
+              strokeWidth="3" 
+            />
+
+            {[
+              { x: 50, yMem: 130, yWalk: 160, label: 'Jan' },
+              { x: 170, yMem: 95, yWalk: 145, label: 'Feb' },
+              { x: 290, yMem: 90, yWalk: 120, label: 'Mar' },
+              { x: 410, yMem: 70, yWalk: 115, label: 'Apr' },
+              { x: 530, yMem: 50, yWalk: 110, label: 'May' },
+              { x: 650, yMem: 30, yWalk: 90, label: 'Jun' },
+            ].map((pt, idx) => (
+              <g key={idx}>
+                <circle cx={pt.x} cy={pt.yMem} r="5" fill="#ffffff" stroke="#0A5C36" strokeWidth="3" />
+                <circle cx={pt.x} cy={pt.yWalk} r="5" fill="#ffffff" stroke="#f97316" strokeWidth="3" />
+              </g>
+            ))}
+          </svg>
+        </div>
+
+        <div className="flex justify-between px-4 text-xs font-semibold text-stone-400">
+          <span>Jan</span>
+          <span>Feb</span>
+          <span>Mar</span>
+          <span>Apr</span>
+          <span>May</span>
+          <span className="text-[#0A5C36]">Jun</span>
+        </div>
+      </div>
+
+      <div className="bg-white rounded-2xl border border-stone-200 shadow-sm overflow-hidden">
+        <div className="p-6 border-b border-stone-200 flex items-center justify-between">
+          <h3 className="font-bold text-stone-900 text-base">Recent Transactions</h3>
+          <button className="text-xs font-bold text-[#0A5C36] hover:underline cursor-pointer">
+            View All →
+          </button>
+        </div>
+
+        <div className="overflow-x-auto">
+          <table className="w-full text-left border-collapse">
+            <thead>
+              <tr className="border-b border-stone-200 text-stone-400 text-xs font-semibold tracking-wider bg-stone-50/50">
+                <th className="py-3 px-6">TRANSACTION ID</th>
+                <th className="py-3 px-6">DATE & TIME</th>
+                <th className="py-3 px-6">CUSTOMER NAME</th>
+                <th className="py-3 px-6">REVENUE CATEGORY</th>
+                <th className="py-3 px-6">PAYMENT METHOD</th>
+                <th className="py-3 px-6 text-right">AMOUNT</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-stone-100 text-sm">
+              {[
+                { id: '#TRX-8924', date: 'Today, 10:42 AM', name: 'Jose Santos', cat: 'Membership Renewal', method: 'GCash', amount: '₱499.00' },
+                { id: '#TRX-8923', date: 'Today, 09:15 AM', name: 'Guest User', cat: 'Daily Pass', method: 'Cash', amount: '₱25.00' },
+                { id: '#TRX-8922', date: 'Yesterday, 04:30 PM', name: 'Alma Vera', cat: 'Membership Renewal', method: 'GCash', amount: '₱75.00' },
+              ].map((trx, index) => (
+                <tr key={index} className="hover:bg-stone-50/50 transition">
+                  <td className="py-4 px-6 font-medium text-stone-600">{trx.id}</td>
+                  <td className="py-4 px-6 text-stone-600">{trx.date}</td>
+                  <td className="py-4 px-6 flex items-center space-x-3">
+                    <div className="w-8 h-8 rounded-full bg-stone-200 text-stone-700 font-bold text-xs flex items-center justify-center">
+                      {trx.name.split(' ').map(n => n[0]).join('')}
+                    </div>
+                    <span className="font-semibold text-stone-900">{trx.name}</span>
+                  </td>
+                  <td className="py-4 px-6">
+                    <span className={`inline-flex px-3 py-1 rounded-full text-xs font-medium ${
+                      trx.cat === 'Membership Renewal' ? 'bg-emerald-100 text-emerald-800' : 'bg-orange-100 text-orange-800'
+                    }`}>
+                      {trx.cat}
+                    </span>
+                  </td>
+                  <td className="py-4 px-6 text-stone-600">{trx.method}</td>
+                  <td className="py-4 px-6 text-right font-bold text-stone-900">{trx.amount}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export default function AdminDashboard() {
+  return (
+    <div className="min-h-screen bg-stone-100 flex font-sans">
+      <AdminSidebar />
+
+      <div className="flex-1 flex flex-col min-w-0">
+        <header className="bg-white border-b border-stone-200 h-16 flex items-center justify-between px-8 relative">
+          <span className="font-semibold text-stone-800 text-sm">Gym Management</span>
+          <div className="w-9 h-9 rounded-full bg-stone-200 flex items-center justify-center text-stone-600 border border-stone-300">
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+            </svg>
+          </div>
+        </header>
+
+        <main className="p-8 max-w-6xl w-full mx-auto flex-1">
+          <Routes>
+            <Route path="/" element={<AdminReportsView />} />
+            <Route path="/employees" element={<Employees />} />
+            <Route path="/activity-log" element={<div className="text-2xl font-bold text-stone-800">Activity Log View</div>} />
+            <Route path="/transaction" element={<div className="text-2xl font-bold text-stone-800">Transaction History View</div>} />
+            <Route path="/settings" element={<div className="text-2xl font-bold text-stone-800">Admin Settings View</div>} />
+          </Routes>
+        </main>
+      </div>
+    </div>
+  );
+}
