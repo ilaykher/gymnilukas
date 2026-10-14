@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Routes, Route } from 'react-router-dom';
-import AdminSidebar from '../../components/Admin/AdminSidebar';
+import AdminSidebar from '../../components/admin/AdminSidebar';
 import Employees from './Employees';
 
 function AdminReportsView() {
