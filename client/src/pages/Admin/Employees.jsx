@@ -1,6 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 
 export default function Employees() {
+  const location = useLocation();
   const [currentView, setCurrentView] = useState('list');
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isResetModalOpen, setIsResetModalOpen] = useState(false);
@@ -22,6 +24,12 @@ export default function Employees() {
     pin: '',
     isActive: true
   });
+
+  useEffect(() => {
+    if (location.state && location.state.openAddStaff) {
+      setCurrentView('add');
+    }
+  }, [location.state]);
 
   const handleOpenEdit = (staff) => {
     setSelectedStaff(staff);
