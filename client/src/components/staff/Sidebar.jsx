@@ -7,9 +7,9 @@ export default function Sidebar() {
   const isActive = (path) => location.pathname === path;
 
   return (
-    <aside className="w-64 bg-[#0A5C36] text-white flex flex-col justify-between hidden md:flex select-none shrink-0">
+    <aside className="w-64 bg-[#0A5C36] dark:bg-neutral-900 text-white flex flex-col justify-between hidden md:flex select-none shrink-0 border-r border-transparent dark:border-neutral-800 transition-colors duration-200">
       <div>
-        <div className="p-6 flex items-center space-x-3 border-b border-[#0f7a4a]">
+        <div className="p-6 flex items-center space-x-3 border-b border-[#0f7a4a] dark:border-neutral-800">
           <div className="w-10 h-10 rounded-xl overflow-hidden bg-white/10 flex items-center justify-center shrink-0 border border-white/20 shadow-sm">
             <img 
               src={logoImage} 
@@ -27,7 +27,7 @@ export default function Sidebar() {
           <Link 
             to="/" 
             className={`flex items-center space-x-3 px-4 py-3 rounded-xl transition text-sm font-medium ${
-              isActive('/') ? 'bg-orange-600 text-white font-semibold shadow-md' : 'text-emerald-100 hover:bg-white/10'
+              isActive('/') ? 'bg-orange-600 text-white font-semibold shadow-md' : 'text-emerald-100 hover:bg-white/10 dark:hover:bg-neutral-800'
             }`}
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -39,7 +39,7 @@ export default function Sidebar() {
           <Link 
             to="/members" 
             className={`flex items-center space-x-3 px-4 py-3 rounded-xl transition text-sm font-medium ${
-              isActive('/members') ? 'bg-orange-600 text-white font-semibold shadow-md' : 'text-emerald-100 hover:bg-white/10'
+              isActive('/members') ? 'bg-orange-600 text-white font-semibold shadow-md' : 'text-emerald-100 hover:bg-white/10 dark:hover:bg-neutral-800'
             }`}
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -50,7 +50,7 @@ export default function Sidebar() {
         </nav>
       </div>
 
-      <div className="p-4 space-y-2 border-t border-[#0f7a4a]">
+      <div className="p-4 space-y-2 border-t border-[#0f7a4a] dark:border-neutral-800">
         <Link 
           to="/register-member" 
           className={`flex items-center space-x-3 px-4 py-3 rounded-xl transition text-sm font-medium ${
@@ -66,7 +66,7 @@ export default function Sidebar() {
         <Link 
           to="/settings" 
           className={`flex items-center space-x-3 px-4 py-3 rounded-xl transition text-sm font-medium ${
-            isActive('/settings') ? 'bg-orange-600 text-white font-semibold shadow-md' : 'text-emerald-100 hover:bg-white/10'
+            isActive('/settings') ? 'bg-orange-600 text-white font-semibold shadow-md' : 'text-emerald-100 hover:bg-white/10 dark:hover:bg-neutral-800'
           }`}
         >
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -78,7 +78,7 @@ export default function Sidebar() {
 
         <Link 
           to="/login" 
-          className="flex items-center space-x-3 px-4 py-3 rounded-xl text-emerald-100 hover:bg-white/10 transition text-sm font-medium"
+          className="flex items-center space-x-3 px-4 py-3 rounded-xl text-emerald-100 hover:bg-white/10 dark:hover:bg-neutral-800 transition text-sm font-medium"
         >
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />

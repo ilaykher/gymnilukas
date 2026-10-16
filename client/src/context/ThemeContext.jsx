@@ -1,29 +1,42 @@
+
 import React, { createContext, useContext, useEffect, useState } from 'react';
 
 const ThemeContext = createContext();
 
 export function ThemeProvider({ children }) {
   const [isDarkMode, setIsDarkMode] = useState(() => {
-    // Kunin ang na-save na preference sa localStorage o i-check ang system theme
-    const savedTheme = localStorage.getItem('theme');
-    if (savedTheme) {
-      return savedTheme === 'dark';
+    if (typeof window === 'undefined') {
+      return false;
     }
-    return window.matchMedia('(prefers-color-scheme: dark)').matches;
+
+    try {
+      const savedTheme = localStorage.getItem('theme');
+
+      if (savedTheme) {
+        return savedTheme === 'dark';
+      }
+
+      return window.matchMedia('(prefers-color-scheme: dark)').matches;
+    } catch {
+      return false;
+    }
   });
 
   useEffect(() => {
     const root = document.documentElement;
-    if (isDarkMode) {
-      root.classList.add('dark');
-      localStorage.setItem('theme', 'dark');
-    } else {
-      root.classList.remove('dark');
-      localStorage.setItem('theme', 'light');
+
+    root.classList.toggle('dark', isDarkMode);
+
+    try {
+      localStorage.setItem('theme', isDarkMode ? 'dark' : 'light');
+    } catch {
+      // Continue using the selected theme if storage is unavailable.
     }
   }, [isDarkMode]);
 
-  const toggleDarkMode = () => setIsDarkMode((prev) => !prev);
+  const toggleDarkMode = () => {
+    setIsDarkMode((previousMode) => !previousMode);
+  };
 
   return (
     <ThemeContext.Provider value={{ isDarkMode, toggleDarkMode }}>

@@ -37,18 +37,18 @@ export default function RegisterMember() {
   const amountDue = membershipType === 'regular' ? '₱450.00' : '₱350.00';
 
   return (
-    <div className="max-w-xl mx-auto py-8 select-none">
-      <div className="bg-white rounded-3xl border border-stone-200 shadow-xl p-8 space-y-6">
+    <div className="max-w-xl mx-auto py-8 select-none transition-colors duration-200">
+      <div className="bg-white dark:bg-neutral-900 rounded-3xl border border-stone-200 dark:border-neutral-800 shadow-xl p-8 space-y-6 transition-colors duration-200">
         <div className="text-center">
-          <h2 className="text-2xl font-extrabold text-[#0A5C36]">Register Member</h2>
-          <p className="text-stone-500 text-xs mt-1">
+          <h2 className="text-2xl font-extrabold text-[#0A5C36] dark:text-emerald-400">Register Member</h2>
+          <p className="text-stone-500 dark:text-neutral-400 text-xs mt-1">
             Please fill in the details below to create a new monthly member profile.
           </p>
         </div>
 
         <form onSubmit={handleOpenPayment} className="space-y-4">
           <div>
-            <label className="block text-xs font-bold text-stone-700 mb-1">Full Name</label>
+            <label className="block text-xs font-bold text-stone-700 dark:text-neutral-300 mb-1">Full Name</label>
             <input
               type="text"
               name="fullName"
@@ -56,12 +56,12 @@ export default function RegisterMember() {
               value={formData.fullName}
               onChange={handleInputChange}
               required
-              className="w-full px-4 py-3 bg-white border border-stone-200 rounded-xl text-stone-800 text-sm focus:outline-none focus:ring-2 focus:ring-[#0A5C36]"
+              className="w-full px-4 py-3 bg-white dark:bg-neutral-800 border border-stone-200 dark:border-neutral-700 rounded-xl text-stone-800 dark:text-white placeholder-stone-400 dark:placeholder-neutral-500 text-sm focus:outline-none focus:ring-2 focus:ring-[#0A5C36]"
             />
           </div>
 
           <div>
-            <label className="block text-xs font-bold text-stone-700 mb-1">Username</label>
+            <label className="block text-xs font-bold text-stone-700 dark:text-neutral-300 mb-1">Username</label>
             <input
               type="text"
               name="username"
@@ -69,12 +69,12 @@ export default function RegisterMember() {
               value={formData.username}
               onChange={handleInputChange}
               required
-              className="w-full px-4 py-3 bg-white border border-stone-200 rounded-xl text-stone-800 text-sm focus:outline-none focus:ring-2 focus:ring-[#0A5C36]"
+              className="w-full px-4 py-3 bg-white dark:bg-neutral-800 border border-stone-200 dark:border-neutral-700 rounded-xl text-stone-800 dark:text-white placeholder-stone-400 dark:placeholder-neutral-500 text-sm focus:outline-none focus:ring-2 focus:ring-[#0A5C36]"
             />
           </div>
 
           <div>
-            <label className="block text-xs font-bold text-stone-700 mb-1">Contact Number</label>
+            <label className="block text-xs font-bold text-stone-700 dark:text-neutral-300 mb-1">Contact Number</label>
             <input
               type="text"
               name="contactNumber"
@@ -82,12 +82,12 @@ export default function RegisterMember() {
               value={formData.contactNumber}
               onChange={handleInputChange}
               required
-              className="w-full px-4 py-3 bg-white border border-stone-200 rounded-xl text-stone-800 text-sm focus:outline-none focus:ring-2 focus:ring-[#0A5C36]"
+              className="w-full px-4 py-3 bg-white dark:bg-neutral-800 border border-stone-200 dark:border-neutral-700 rounded-xl text-stone-800 dark:text-white placeholder-stone-400 dark:placeholder-neutral-500 text-sm focus:outline-none focus:ring-2 focus:ring-[#0A5C36]"
             />
           </div>
 
           <div>
-            <label className="block text-xs font-bold text-stone-700 mb-1">Address</label>
+            <label className="block text-xs font-bold text-stone-700 dark:text-neutral-300 mb-1">Address</label>
             <input
               type="text"
               name="address"
@@ -95,13 +95,13 @@ export default function RegisterMember() {
               value={formData.address}
               onChange={handleInputChange}
               required
-              className="w-full px-4 py-3 bg-white border border-stone-200 rounded-xl text-stone-800 text-sm focus:outline-none focus:ring-2 focus:ring-[#0A5C36]"
+              className="w-full px-4 py-3 bg-white dark:bg-neutral-800 border border-stone-200 dark:border-neutral-700 rounded-xl text-stone-800 dark:text-white placeholder-stone-400 dark:placeholder-neutral-500 text-sm focus:outline-none focus:ring-2 focus:ring-[#0A5C36]"
             />
           </div>
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-xs font-bold text-stone-700 mb-1">PIN</label>
+              <label className="block text-xs font-bold text-stone-700 dark:text-neutral-300 mb-1">PIN</label>
               <input
                 type="password"
                 name="pin"
@@ -110,19 +110,19 @@ export default function RegisterMember() {
                 value={formData.pin}
                 onChange={handleInputChange}
                 required
-                className="w-full px-4 py-3 bg-white border border-stone-200 rounded-xl text-stone-800 text-sm focus:outline-none focus:ring-2 focus:ring-[#0A5C36]"
+                className="w-full px-4 py-3 bg-white dark:bg-neutral-800 border border-stone-200 dark:border-neutral-700 rounded-xl text-stone-800 dark:text-white placeholder-stone-400 dark:placeholder-neutral-500 text-sm focus:outline-none focus:ring-2 focus:ring-[#0A5C36]"
               />
             </div>
 
             <div>
-              <label className="block text-xs font-bold text-stone-700 mb-1">Weight (KG, Optional)</label>
+              <label className="block text-xs font-bold text-stone-700 dark:text-neutral-300 mb-1">Weight (KG, Optional)</label>
               <input
                 type="text"
                 name="weight"
                 placeholder="e.g. 75"
                 value={formData.weight}
                 onChange={handleInputChange}
-                className="w-full px-4 py-3 bg-white border border-stone-200 rounded-xl text-stone-800 text-sm focus:outline-none focus:ring-2 focus:ring-[#0A5C36]"
+                className="w-full px-4 py-3 bg-white dark:bg-neutral-800 border border-stone-200 dark:border-neutral-700 rounded-xl text-stone-800 dark:text-white placeholder-stone-400 dark:placeholder-neutral-500 text-sm focus:outline-none focus:ring-2 focus:ring-[#0A5C36]"
               />
             </div>
           </div>
@@ -131,7 +131,7 @@ export default function RegisterMember() {
             <button
               type="button"
               onClick={() => navigate(-1)}
-              className="text-xs font-bold text-[#0A5C36] hover:underline cursor-pointer"
+              className="text-xs font-bold text-[#0A5C36] dark:text-emerald-400 hover:underline cursor-pointer"
             >
               Cancel
             </button>
@@ -141,7 +141,6 @@ export default function RegisterMember() {
               className="px-8 py-3.5 bg-[#0A5C36] hover:bg-[#074729] text-white rounded-xl text-sm font-bold shadow-md transition flex items-center space-x-2 cursor-pointer"
             >
               <span>Register</span>
-              {/* Updated SVG para maging eksaktong katulad ng icon sa larawan */}
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a3 3 0 00-3-3m-3-3l2 2 4-4" />
               </svg>
@@ -152,36 +151,36 @@ export default function RegisterMember() {
 
       {showPaymentModal && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-xs flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-3xl border border-stone-200 shadow-2xl max-w-md w-full overflow-hidden p-6 relative animate-in fade-in zoom-in duration-200">
-            <div className="flex items-center justify-between pb-4 border-b border-stone-100 mb-4">
-              <h3 className="text-lg font-extrabold text-stone-900">Complete Member Payment</h3>
+          <div className="bg-white dark:bg-neutral-900 rounded-3xl border border-stone-200 dark:border-neutral-800 shadow-2xl max-w-md w-full overflow-hidden p-6 relative animate-in fade-in zoom-in duration-200 transition-colors duration-200">
+            <div className="flex items-center justify-between pb-4 border-b border-stone-100 dark:border-neutral-800 mb-4">
+              <h3 className="text-lg font-extrabold text-stone-900 dark:text-white">Complete Member Payment</h3>
               <button
                 type="button"
                 onClick={() => setShowPaymentModal(false)}
-                className="text-stone-400 hover:text-stone-600 transition cursor-pointer"
+                className="text-stone-400 dark:text-neutral-500 hover:text-stone-600 dark:hover:text-neutral-300 transition cursor-pointer"
               >
                 ✕
               </button>
             </div>
 
-            <div className="bg-stone-50 rounded-2xl p-3 mb-4 border border-stone-200 text-xs space-y-1">
+            <div className="bg-stone-50 dark:bg-neutral-800/60 rounded-2xl p-3 mb-4 border border-stone-200 dark:border-neutral-700 text-xs space-y-1">
               <div className="flex justify-between">
-                <span className="text-stone-400 font-bold">Member Name</span>
-                <span className="font-bold text-stone-800">{formData.fullName || 'Julia Dizon'}</span>
+                <span className="text-stone-400 dark:text-neutral-400 font-bold">Member Name</span>
+                <span className="font-bold text-stone-800 dark:text-white">{formData.fullName || 'Julia Dizon'}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-stone-400 font-bold">Username</span>
-                <span className="font-bold text-stone-800">@{formData.username || 'juliadizon123'}</span>
+                <span className="text-stone-400 dark:text-neutral-400 font-bold">Username</span>
+                <span className="font-bold text-stone-800 dark:text-white">@{formData.username || 'juliadizon123'}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-stone-400 font-bold">Plan Term</span>
-                <span className="font-bold text-stone-800">Monthly Membership (1 Month)</span>
+                <span className="text-stone-400 dark:text-neutral-400 font-bold">Plan Term</span>
+                <span className="font-bold text-stone-800 dark:text-white">Monthly Membership (1 Month)</span>
               </div>
             </div>
 
             <form onSubmit={handleCompletePayment} className="space-y-4">
               <div>
-                <label className="block text-[10px] font-extrabold text-stone-400 uppercase tracking-wider mb-2">
+                <label className="block text-[10px] font-extrabold text-stone-400 dark:text-neutral-400 uppercase tracking-wider mb-2">
                   Select Membership Type
                 </label>
 
@@ -190,8 +189,8 @@ export default function RegisterMember() {
                     onClick={() => setMembershipType('regular')}
                     className={`p-3 rounded-2xl border transition cursor-pointer flex items-center justify-between ${
                       membershipType === 'regular'
-                        ? 'border-[#0A5C36] bg-emerald-50/40'
-                        : 'border-stone-200 bg-white'
+                        ? 'border-[#0A5C36] bg-emerald-50/40 dark:bg-emerald-950/40'
+                        : 'border-stone-200 dark:border-neutral-700 bg-white dark:bg-neutral-800'
                     }`}
                   >
                     <div className="flex items-center space-x-3">
@@ -203,19 +202,19 @@ export default function RegisterMember() {
                         className="accent-[#0A5C36]"
                       />
                       <div>
-                        <p className="text-xs font-bold text-stone-800">Regular Rate</p>
-                        <p className="text-[10px] text-stone-400">Standard full-access membership</p>
+                        <p className="text-xs font-bold text-stone-800 dark:text-white">Regular Rate</p>
+                        <p className="text-[10px] text-stone-400 dark:text-neutral-400">Standard full-access membership</p>
                       </div>
                     </div>
-                    <span className="font-extrabold text-xs text-stone-900">₱450.00</span>
+                    <span className="font-extrabold text-xs text-stone-900 dark:text-white">₱450.00</span>
                   </div>
 
                   <div
                     onClick={() => setMembershipType('student')}
                     className={`p-3 rounded-2xl border transition cursor-pointer flex items-center justify-between ${
                       membershipType === 'student'
-                        ? 'border-[#0A5C36] bg-emerald-50/40'
-                        : 'border-stone-200 bg-white'
+                        ? 'border-[#0A5C36] bg-emerald-50/40 dark:bg-emerald-950/40'
+                        : 'border-stone-200 dark:border-neutral-700 bg-white dark:bg-neutral-800'
                     }`}
                   >
                     <div className="flex items-center space-x-3">
@@ -228,21 +227,21 @@ export default function RegisterMember() {
                       />
                       <div>
                         <div className="flex items-center space-x-1.5">
-                          <p className="text-xs font-bold text-stone-800">Student Rate</p>
-                          <span className="px-1.5 py-0.5 bg-blue-100 text-blue-700 text-[9px] font-extrabold rounded-md">
+                          <p className="text-xs font-bold text-stone-800 dark:text-white">Student Rate</p>
+                          <span className="px-1.5 py-0.5 bg-blue-100 dark:bg-blue-950 text-blue-700 dark:text-blue-300 text-[9px] font-extrabold rounded-md">
                             Special
                           </span>
                         </div>
-                        <p className="text-[10px] text-stone-400">Requires valid student ID verification</p>
+                        <p className="text-[10px] text-stone-400 dark:text-neutral-400">Requires valid student ID verification</p>
                       </div>
                     </div>
-                    <span className="font-extrabold text-xs text-stone-900">₱350.00</span>
+                    <span className="font-extrabold text-xs text-stone-900 dark:text-white">₱350.00</span>
                   </div>
                 </div>
               </div>
 
               <div>
-                <label className="block text-[10px] font-extrabold text-stone-400 uppercase tracking-wider mb-2">
+                <label className="block text-[10px] font-extrabold text-stone-400 dark:text-neutral-400 uppercase tracking-wider mb-2">
                   Payment Method
                 </label>
                 <div className="grid grid-cols-2 gap-3">
@@ -252,7 +251,7 @@ export default function RegisterMember() {
                     className={`py-2.5 rounded-xl text-xs font-bold border transition cursor-pointer flex items-center justify-center space-x-2 ${
                       paymentMethod === 'cash'
                         ? 'border-[#0A5C36] bg-[#0A5C36] text-white'
-                        : 'border-stone-200 bg-white text-stone-700'
+                        : 'border-stone-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-stone-700 dark:text-neutral-300'
                     }`}
                   >
                     <span>💵 Cash</span>
@@ -264,7 +263,7 @@ export default function RegisterMember() {
                     className={`py-2.5 rounded-xl text-xs font-bold border transition cursor-pointer flex items-center justify-center space-x-2 ${
                       paymentMethod === 'gcash'
                         ? 'border-[#0A5C36] bg-[#0A5C36] text-white'
-                        : 'border-stone-200 bg-white text-stone-700'
+                        : 'border-stone-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-stone-700 dark:text-neutral-300'
                     }`}
                   >
                     <span>📱 GCash</span>
@@ -273,20 +272,20 @@ export default function RegisterMember() {
               </div>
 
               {paymentMethod === 'gcash' && (
-                <div className="bg-stone-50 p-3 rounded-2xl border border-stone-200 space-y-2">
+                <div className="bg-stone-50 dark:bg-neutral-800/60 p-3 rounded-2xl border border-stone-200 dark:border-neutral-700 space-y-2">
                   <div className="flex items-center space-x-3">
-                    <div className="w-16 h-16 bg-stone-200 rounded-xl flex items-center justify-center text-[10px] text-stone-500 font-bold">
+                    <div className="w-16 h-16 bg-stone-200 dark:bg-neutral-700 rounded-xl flex items-center justify-center text-[10px] text-stone-500 dark:text-neutral-300 font-bold">
                       QR CODE
                     </div>
-                    <div className="text-[11px] text-stone-600 space-y-0.5">
-                      <p className="font-bold text-stone-900">ACCOUNT NAME: Gym ni Lucas</p>
+                    <div className="text-[11px] text-stone-600 dark:text-neutral-300 space-y-0.5">
+                      <p className="font-bold text-stone-900 dark:text-white">ACCOUNT NAME: Gym ni Lucas</p>
                       <p>ACCOUNT NUMBER: 09XX-XXX-XXXX</p>
-                      <p className="text-[10px] text-emerald-700">📷 Scan with GCash App</p>
+                      <p className="text-[10px] text-emerald-700 dark:text-emerald-400">📷 Scan with GCash App</p>
                     </div>
                   </div>
 
                   <div>
-                    <label className="block text-[10px] font-bold text-stone-500 mb-1">
+                    <label className="block text-[10px] font-bold text-stone-500 dark:text-neutral-400 mb-1">
                       Input Reference Number
                     </label>
                     <input
@@ -295,22 +294,22 @@ export default function RegisterMember() {
                       value={refNumber}
                       onChange={(e) => setRefNumber(e.target.value)}
                       required
-                      className="w-full px-3 py-2 bg-white border border-stone-200 rounded-xl text-xs text-stone-800 focus:outline-none focus:ring-1 focus:ring-[#0A5C36]"
+                      className="w-full px-3 py-2 bg-white dark:bg-neutral-800 border border-stone-200 dark:border-neutral-700 rounded-xl text-xs text-stone-800 dark:text-white placeholder-stone-400 dark:placeholder-neutral-500 focus:outline-none focus:ring-1 focus:ring-[#0A5C36]"
                     />
                   </div>
                 </div>
               )}
 
-              <div className="flex items-center justify-between bg-stone-50 p-3 rounded-2xl border border-stone-200">
-                <span className="text-xs font-bold text-stone-500">Amount Due</span>
-                <span className="text-lg font-extrabold text-orange-600">{amountDue}</span>
+              <div className="flex items-center justify-between bg-stone-50 dark:bg-neutral-800/60 p-3 rounded-2xl border border-stone-200 dark:border-neutral-700">
+                <span className="text-xs font-bold text-stone-500 dark:text-neutral-400">Amount Due</span>
+                <span className="text-lg font-extrabold text-orange-600 dark:text-orange-400">{amountDue}</span>
               </div>
 
               <div className="flex items-center space-x-3 pt-2">
                 <button
                   type="button"
                   onClick={() => setShowPaymentModal(false)}
-                  className="w-1/3 py-3 border border-stone-200 hover:bg-stone-50 text-stone-700 rounded-xl text-xs font-bold transition cursor-pointer"
+                  className="w-1/3 py-3 border border-stone-200 dark:border-neutral-700 hover:bg-stone-50 dark:hover:bg-neutral-800 text-stone-700 dark:text-neutral-300 rounded-xl text-xs font-bold transition cursor-pointer"
                 >
                   Cancel
                 </button>
