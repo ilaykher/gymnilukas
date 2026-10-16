@@ -44,6 +44,7 @@ export default function App() {
             <Route path="/register-member" element={<RegisterMember />} />
             <Route path="/settings" element={<Settings />} />
           </Route>
+          
         </Routes>
       </BrowserRouter>
     </ThemeProvider>

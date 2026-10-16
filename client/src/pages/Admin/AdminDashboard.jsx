@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Routes, Route, useNavigate } from 'react-router-dom';
-import AdminSidebar from '../../components/admin/AdminSidebar';
+import AdminSidebar from '../../components/Admin/AdminSidebar';
 import Employees from './Employees';
 import ActivityLog from './ActivityLog';
 import Transactions from './Transactions';

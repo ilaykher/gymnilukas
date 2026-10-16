@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import logoImage from '../../assets/logo.jpg'; 
+import logoImage from '../../assets/logo.jpg';
 
 export default function AdminSidebar() {
   const location = useLocation();
@@ -78,15 +78,15 @@ export default function AdminSidebar() {
 
       <div className="p-4 space-y-3 border-t border-[#0f7a4a]">
         <Link 
-          to="/admin/register-employee" 
+          to="/admin/add-staff" 
           className={`w-full font-semibold px-4 py-3 rounded-xl text-sm shadow-md transition flex items-center space-x-2 ${
-            isActive('/admin/register-employee') ? 'bg-orange-700 text-white' : 'bg-orange-600 hover:bg-orange-700 text-white'
+            isActive('/admin/add-staff') ? 'bg-orange-700 text-white' : 'bg-orange-600 hover:bg-orange-700 text-white'
           }`}
         >
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
           </svg>
-          <span>Register Member</span>
+          <span>Add Staff</span>
         </Link>
 
         <div className="space-y-1">
