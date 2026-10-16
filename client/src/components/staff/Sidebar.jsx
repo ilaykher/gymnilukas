@@ -16,6 +16,7 @@ export default function Sidebar() {
           </div>
           <div>
             <h1 className="font-bold text-base leading-tight">Gym ni Lucas</h1>
+            <p className="text-xs text-emerald-200/80">Staff</p>
           </div>
         </div>
 

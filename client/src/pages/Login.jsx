@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
@@ -36,7 +37,7 @@ export default function Login() {
 
         <form onSubmit={handleLoginSubmit} className="space-y-4">
           <div>
-            <input 
+            <input
               type="text"
               placeholder="ID / Username"
               value={username}
@@ -47,7 +48,7 @@ export default function Login() {
           </div>
 
           <div className="relative">
-            <input 
+            <input
               type={showPassword ? "text" : "password"}
               placeholder="Password"
               value={password}
@@ -71,7 +72,14 @@ export default function Login() {
           </div>
 
           <div className="flex justify-end">
-            <a href="#forgot" onClick={(e) => { e.preventDefault(); alert('Password reset link sent.'); }} className="text-xs font-medium text-[#0A5C36] hover:underline">
+            <a
+              href="#forgot"
+              onClick={(e) => {
+                e.preventDefault();
+                alert('Password reset link sent.');
+              }}
+              className="text-xs font-medium text-[#0A5C36] hover:underline"
+            >
               Forgot password?
             </a>
           </div>
