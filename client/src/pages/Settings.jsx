@@ -49,21 +49,6 @@ export default function Settings() {
               <p className="text-xs text-stone-500">{plans.length} plans - {plans.length} active</p>
             </div>
           </div>
-
-          <button 
-            disabled={!isAdmin}
-            onClick={() => alert('Add plan feature')}
-            className={`font-semibold px-4 py-2 rounded-xl text-xs shadow-sm transition flex items-center space-x-1.5 ${
-              isAdmin 
-                ? 'bg-[#0A5C36] hover:bg-[#074729] text-white cursor-pointer' 
-                : 'bg-stone-200 text-stone-400 cursor-not-allowed'
-            }`}
-          >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" />
-            </svg>
-            <span>Add plan</span>
-          </button>
         </div>
 
         <div className="overflow-x-auto">

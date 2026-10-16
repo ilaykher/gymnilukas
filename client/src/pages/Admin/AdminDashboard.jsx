@@ -1,7 +1,9 @@
+
 import React, { useState, useRef, useEffect } from 'react';
 import { Routes, Route, useNavigate } from 'react-router-dom';
 import AdminSidebar from '../../components/Admin/AdminSidebar';
 import Employees from './Employees';
+import RegisterEmployee from './RegisterEmployee';
 import ActivityLog from './ActivityLog';
 import Transactions from './Transactions';
 import Settings from '../Settings';
@@ -65,9 +67,7 @@ function AdminReportsView() {
         <div className="bg-white p-6 rounded-2xl border border-stone-200 shadow-sm relative overflow-hidden">
           <div className="flex items-center justify-between mb-2">
             <span className="text-xs font-bold text-stone-400 uppercase tracking-wider">Total Earnings</span>
-            <div className="w-8 h-8 rounded-xl bg-emerald-50 text-[#0A5C36] flex items-center justify-center font-bold">
-              ₱
-            </div>
+            <div className="w-8 h-8 rounded-xl bg-emerald-50 text-[#0A5C36] flex items-center justify-center font-bold">₱</div>
           </div>
           <h3 className="text-3xl font-extrabold text-stone-900 mt-1">₱124,500</h3>
         </div>
@@ -77,7 +77,7 @@ function AdminReportsView() {
             <span className="text-xs font-bold text-stone-400 uppercase tracking-wider">Membership Revenue</span>
             <div className="w-8 h-8 rounded-xl bg-emerald-50 text-[#0A5C36] flex items-center justify-center">
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
               </svg>
             </div>
           </div>
@@ -118,27 +118,16 @@ function AdminReportsView() {
             <line x1="0" y1="100" x2="700" y2="100" stroke="#f0f0ed" strokeWidth="1" strokeDasharray="4 4" />
             <line x1="0" y1="160" x2="700" y2="160" stroke="#f0f0ed" strokeWidth="1" strokeDasharray="4 4" />
 
-            <path 
-              d="M 50 130 Q 170 80, 290 90 T 530 50 T 650 30" 
-              fill="none" 
-              stroke="#0A5C36" 
-              strokeWidth="3" 
-            />
-
-            <path 
-              d="M 50 160 Q 170 140, 290 120 T 530 110 T 650 90" 
-              fill="none" 
-              stroke="#f97316" 
-              strokeWidth="3" 
-            />
+            <path d="M 50 130 Q 170 80, 290 90 T 530 50 T 650 30" fill="none" stroke="#0A5C36" strokeWidth="3" />
+            <path d="M 50 160 Q 170 140, 290 120 T 530 110 T 650 90" fill="none" stroke="#f97316" strokeWidth="3" />
 
             {[
-              { x: 50, yMem: 130, yWalk: 160, label: 'Jan' },
-              { x: 170, yMem: 95, yWalk: 145, label: 'Feb' },
-              { x: 290, yMem: 90, yWalk: 120, label: 'Mar' },
-              { x: 410, yMem: 70, yWalk: 115, label: 'Apr' },
-              { x: 530, yMem: 50, yWalk: 110, label: 'May' },
-              { x: 650, yMem: 30, yWalk: 90, label: 'Jun' },
+              { x: 50, yMem: 130, yWalk: 160 },
+              { x: 170, yMem: 95, yWalk: 145 },
+              { x: 290, yMem: 90, yWalk: 120 },
+              { x: 410, yMem: 70, yWalk: 115 },
+              { x: 530, yMem: 50, yWalk: 110 },
+              { x: 650, yMem: 30, yWalk: 90 },
             ].map((pt, idx) => (
               <g key={idx}>
                 <circle cx={pt.x} cy={pt.yMem} r="5" fill="#ffffff" stroke="#0A5C36" strokeWidth="3" />
@@ -171,7 +160,7 @@ function AdminReportsView() {
             <thead>
               <tr className="border-b border-stone-200 text-stone-400 text-xs font-semibold tracking-wider bg-stone-50/50">
                 <th className="py-3 px-6">TRANSACTION ID</th>
-                <th className="py-3 px-6">DATE & TIME</th>
+                <th className="py-3 px-6">DATE &amp; TIME</th>
                 <th className="py-3 px-6">CUSTOMER NAME</th>
                 <th className="py-3 px-6">REVENUE CATEGORY</th>
                 <th className="py-3 px-6">PAYMENT METHOD</th>
@@ -187,11 +176,13 @@ function AdminReportsView() {
                 <tr key={index} className="hover:bg-stone-50/50 transition">
                   <td className="py-4 px-6 font-medium text-stone-600">{trx.id}</td>
                   <td className="py-4 px-6 text-stone-600">{trx.date}</td>
-                  <td className="py-4 px-6 flex items-center space-x-3">
-                    <div className="w-8 h-8 rounded-full bg-stone-200 text-stone-700 font-bold text-xs flex items-center justify-center">
-                      {trx.name.split(' ').map(n => n[0]).join('')}
+                  <td className="py-4 px-6">
+                    <div className="flex items-center space-x-3">
+                      <div className="w-8 h-8 rounded-full bg-stone-200 text-stone-700 font-bold text-xs flex items-center justify-center">
+                        {trx.name.split(' ').map(n => n[0]).join('')}
+                      </div>
+                      <span className="font-semibold text-stone-900">{trx.name}</span>
                     </div>
-                    <span className="font-semibold text-stone-900">{trx.name}</span>
                   </td>
                   <td className="py-4 px-6">
                     <span className={`inline-flex px-3 py-1 rounded-full text-xs font-medium ${
@@ -223,6 +214,7 @@ export default function AdminDashboard() {
         setDropdownOpen(false);
       }
     }
+
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
@@ -239,9 +231,9 @@ export default function AdminDashboard() {
       <div className="flex-1 flex flex-col min-w-0">
         <header className="bg-white border-b border-stone-200 h-16 flex items-center justify-between px-8 relative z-20">
           <span className="font-semibold text-stone-800 text-sm">Gym Management</span>
-          
+
           <div className="relative" ref={dropdownRef}>
-            <button 
+            <button
               onClick={() => setDropdownOpen(!dropdownOpen)}
               className="w-10 h-10 rounded-full bg-stone-200 flex items-center justify-center text-stone-600 border border-stone-300 hover:bg-stone-300 transition cursor-pointer shadow-xs"
             >
@@ -260,7 +252,7 @@ export default function AdminDashboard() {
                 </div>
 
                 <div className="pt-2">
-                  <button 
+                  <button
                     onClick={handleLogout}
                     className="w-full px-3 py-2 text-left text-xs font-semibold text-red-600 hover:bg-red-50 rounded-xl transition flex items-center space-x-2.5 cursor-pointer"
                   >
@@ -277,11 +269,12 @@ export default function AdminDashboard() {
 
         <main className="p-8 max-w-6xl w-full mx-auto flex-1">
           <Routes>
-            <Route path="/" element={<AdminReportsView />} />
-            <Route path="/employees" element={<Employees />} />
-            <Route path="/activity-log" element={<ActivityLog />} />
-            <Route path="/transaction" element={<Transactions />} />
-            <Route path="/settings" element={<Settings />} />
+            <Route index element={<AdminReportsView />} />
+            <Route path="employees" element={<Employees />} />
+            <Route path="register-employee" element={<RegisterEmployee />} />
+            <Route path="activity-log" element={<ActivityLog />} />
+            <Route path="transaction" element={<Transactions />} />
+            <Route path="settings" element={<Settings />} />
           </Routes>
         </main>
       </div>

@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import logoImage from '../../assets/logo.jpg';
@@ -11,24 +12,29 @@ export default function AdminSidebar() {
       <div>
         <div className="p-6 flex items-center space-x-3 border-b border-[#0f7a4a]">
           <div className="w-10 h-10 rounded-xl overflow-hidden bg-white/10 flex items-center justify-center shrink-0 border border-white/20 shadow-sm">
-            <img 
-              src={logoImage} 
-              alt="Gym ni Lucas Logo" 
+            <img
+              src={logoImage}
+              alt="Gym ni Lucas Logo"
               className="w-full h-full object-cover"
             />
           </div>
+
           <div>
-            <h1 className="font-bold text-base leading-tight">Gym ni Lucas</h1>
+            <h1 className="font-bold text-base leading-tight">
+              Gym ni Lucas
+            </h1>
             <p className="text-xs text-emerald-200/80">Admin</p>
           </div>
         </div>
 
         <div className="p-4">
           <nav className="space-y-1">
-            <Link 
-              to="/admin" 
+            <Link
+              to="/admin"
               className={`flex items-center space-x-3 px-4 py-3 rounded-xl transition text-sm font-medium ${
-                isActive('/admin') ? 'bg-orange-600 text-white font-semibold shadow-md' : 'text-emerald-100 hover:bg-white/10'
+                isActive('/admin')
+                  ? 'bg-orange-600 text-white font-semibold shadow-md'
+                  : 'text-emerald-100 hover:bg-white/10'
               }`}
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -37,10 +43,12 @@ export default function AdminSidebar() {
               <span>Reports</span>
             </Link>
 
-            <Link 
-              to="/admin/employees" 
+            <Link
+              to="/admin/employees"
               className={`flex items-center space-x-3 px-4 py-3 rounded-xl transition text-sm font-medium ${
-                isActive('/admin/employees') ? 'bg-orange-600 text-white font-semibold shadow-md' : 'text-emerald-100 hover:bg-white/10'
+                isActive('/admin/employees')
+                  ? 'bg-orange-600 text-white font-semibold shadow-md'
+                  : 'text-emerald-100 hover:bg-white/10'
               }`}
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -49,10 +57,12 @@ export default function AdminSidebar() {
               <span>Employees</span>
             </Link>
 
-            <Link 
-              to="/admin/activity-log" 
+            <Link
+              to="/admin/activity-log"
               className={`flex items-center space-x-3 px-4 py-3 rounded-xl transition text-sm font-medium ${
-                isActive('/admin/activity-log') ? 'bg-orange-600 text-white font-semibold shadow-md' : 'text-emerald-100 hover:bg-white/10'
+                isActive('/admin/activity-log')
+                  ? 'bg-orange-600 text-white font-semibold shadow-md'
+                  : 'text-emerald-100 hover:bg-white/10'
               }`}
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -61,10 +71,12 @@ export default function AdminSidebar() {
               <span>Activity Log</span>
             </Link>
 
-            <Link 
-              to="/admin/transaction" 
+            <Link
+              to="/admin/transaction"
               className={`flex items-center space-x-3 px-4 py-3 rounded-xl transition text-sm font-medium ${
-                isActive('/admin/transaction') ? 'bg-orange-600 text-white font-semibold shadow-md' : 'text-emerald-100 hover:bg-white/10'
+                isActive('/admin/transaction')
+                  ? 'bg-orange-600 text-white font-semibold shadow-md'
+                  : 'text-emerald-100 hover:bg-white/10'
               }`}
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -77,10 +89,12 @@ export default function AdminSidebar() {
       </div>
 
       <div className="p-4 space-y-3 border-t border-[#0f7a4a]">
-        <Link 
-          to="/admin/add-staff" 
+        <Link
+          to="/admin/register-employee"
           className={`w-full font-semibold px-4 py-3 rounded-xl text-sm shadow-md transition flex items-center space-x-2 ${
-            isActive('/admin/add-staff') ? 'bg-orange-700 text-white' : 'bg-orange-600 hover:bg-orange-700 text-white'
+            isActive('/admin/register-employee')
+              ? 'bg-orange-700 text-white'
+              : 'bg-orange-600 hover:bg-orange-700 text-white'
           }`}
         >
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -90,8 +104,8 @@ export default function AdminSidebar() {
         </Link>
 
         <div className="space-y-1">
-          <Link 
-            to="/admin/settings" 
+          <Link
+            to="/admin/settings"
             className="flex items-center space-x-3 px-4 py-3 rounded-xl text-emerald-100 hover:bg-white/10 transition text-sm font-medium"
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -101,8 +115,8 @@ export default function AdminSidebar() {
             <span>Settings</span>
           </Link>
 
-          <Link 
-            to="/login" 
+          <Link
+            to="/login"
             className="flex items-center space-x-3 px-4 py-3 rounded-xl text-emerald-100 hover:bg-white/10 transition text-sm font-medium"
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">

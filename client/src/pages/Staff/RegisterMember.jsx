@@ -3,8 +3,7 @@ import { useNavigate } from 'react-router-dom';
 
 export default function RegisterMember() {
   const navigate = useNavigate();
-  
-  // Form states para sa Register Member (Monthly Membership)
+
   const [formData, setFormData] = useState({
     fullName: '',
     username: '',
@@ -14,10 +13,9 @@ export default function RegisterMember() {
     weight: ''
   });
 
-  // States para sa Monthly Payment Modal workflow
   const [showPaymentModal, setShowPaymentModal] = useState(false);
-  const [membershipType, setMembershipType] = useState('regular'); // 'regular' o 'student'
-  const [paymentMethod, setPaymentMethod] = useState('cash'); // 'cash' o 'gcash'
+  const [membershipType, setMembershipType] = useState('regular');
+  const [paymentMethod, setPaymentMethod] = useState('cash');
   const [refNumber, setRefNumber] = useState('');
 
   const handleInputChange = (e) => {
@@ -27,31 +25,31 @@ export default function RegisterMember() {
 
   const handleOpenPayment = (e) => {
     e.preventDefault();
-    setShowPaymentModal(true); // Buksan ang Monthly Payment modal
+    setShowPaymentModal(true);
   };
 
   const handleCompletePayment = (e) => {
     e.preventDefault();
     alert(`Monthly Membership Registered Successfully for ${formData.fullName || 'Member'}!`);
-    navigate('/staff'); // Bumalik sa dashboard pagkatapos
+    navigate(-1);
   };
 
-  // Monthly Rates
   const amountDue = membershipType === 'regular' ? '₱450.00' : '₱350.00';
 
   return (
     <div className="max-w-xl mx-auto py-8 select-none">
-      {/* STEP 1: Register Member Form (Monthly) */}
       <div className="bg-white rounded-3xl border border-stone-200 shadow-xl p-8 space-y-6">
         <div className="text-center">
           <h2 className="text-2xl font-extrabold text-[#0A5C36]">Register Member</h2>
-          <p className="text-stone-500 text-xs mt-1">Please fill in the details below to create a new monthly member profile.</p>
+          <p className="text-stone-500 text-xs mt-1">
+            Please fill in the details below to create a new monthly member profile.
+          </p>
         </div>
 
         <form onSubmit={handleOpenPayment} className="space-y-4">
           <div>
             <label className="block text-xs font-bold text-stone-700 mb-1">Full Name</label>
-            <input 
+            <input
               type="text"
               name="fullName"
               placeholder="Julia Dizon"
@@ -64,7 +62,7 @@ export default function RegisterMember() {
 
           <div>
             <label className="block text-xs font-bold text-stone-700 mb-1">Username</label>
-            <input 
+            <input
               type="text"
               name="username"
               placeholder="juliadizon123"
@@ -77,7 +75,7 @@ export default function RegisterMember() {
 
           <div>
             <label className="block text-xs font-bold text-stone-700 mb-1">Contact Number</label>
-            <input 
+            <input
               type="text"
               name="contactNumber"
               placeholder="09XX XXX XXXX"
@@ -90,7 +88,7 @@ export default function RegisterMember() {
 
           <div>
             <label className="block text-xs font-bold text-stone-700 mb-1">Address</label>
-            <input 
+            <input
               type="text"
               name="address"
               placeholder="123 Fitness Ave, Apt 4"
@@ -104,7 +102,7 @@ export default function RegisterMember() {
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-xs font-bold text-stone-700 mb-1">PIN</label>
-              <input 
+              <input
                 type="password"
                 name="pin"
                 placeholder="••••"
@@ -115,9 +113,10 @@ export default function RegisterMember() {
                 className="w-full px-4 py-3 bg-white border border-stone-200 rounded-xl text-stone-800 text-sm focus:outline-none focus:ring-2 focus:ring-[#0A5C36]"
               />
             </div>
+
             <div>
               <label className="block text-xs font-bold text-stone-700 mb-1">Weight (KG, Optional)</label>
-              <input 
+              <input
                 type="text"
                 name="weight"
                 placeholder="e.g. 75"
@@ -129,34 +128,35 @@ export default function RegisterMember() {
           </div>
 
           <div className="flex items-center justify-between pt-4">
-            <button 
+            <button
               type="button"
-              onClick={() => navigate('/staff')}
+              onClick={() => navigate(-1)}
               className="text-xs font-bold text-[#0A5C36] hover:underline cursor-pointer"
             >
               Cancel
             </button>
 
-            <button 
+            <button
               type="submit"
               className="px-8 py-3.5 bg-[#0A5C36] hover:bg-[#074729] text-white rounded-xl text-sm font-bold shadow-md transition flex items-center space-x-2 cursor-pointer"
             >
               <span>Register</span>
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+              {/* Updated SVG para maging eksaktong katulad ng icon sa larawan */}
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a3 3 0 00-3-3m-3-3l2 2 4-4" />
               </svg>
             </button>
           </div>
         </form>
       </div>
 
-      {/* STEP 2: Monthly Membership Payment Modal */}
       {showPaymentModal && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-xs flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-3xl border border-stone-200 shadow-2xl max-w-md w-full overflow-hidden p-6 relative animate-in fade-in zoom-in duration-200">
             <div className="flex items-center justify-between pb-4 border-b border-stone-100 mb-4">
               <h3 className="text-lg font-extrabold text-stone-900">Complete Member Payment</h3>
-              <button 
+              <button
+                type="button"
                 onClick={() => setShowPaymentModal(false)}
                 className="text-stone-400 hover:text-stone-600 transition cursor-pointer"
               >
@@ -164,7 +164,6 @@ export default function RegisterMember() {
               </button>
             </div>
 
-            {/* Member Info Summary */}
             <div className="bg-stone-50 rounded-2xl p-3 mb-4 border border-stone-200 text-xs space-y-1">
               <div className="flex justify-between">
                 <span className="text-stone-400 font-bold">Member Name</span>
@@ -181,20 +180,24 @@ export default function RegisterMember() {
             </div>
 
             <form onSubmit={handleCompletePayment} className="space-y-4">
-              {/* Select Membership Type */}
               <div>
-                <label className="block text-[10px] font-extrabold text-stone-400 uppercase tracking-wider mb-2">Select Membership Type</label>
+                <label className="block text-[10px] font-extrabold text-stone-400 uppercase tracking-wider mb-2">
+                  Select Membership Type
+                </label>
+
                 <div className="space-y-2">
-                  <div 
+                  <div
                     onClick={() => setMembershipType('regular')}
                     className={`p-3 rounded-2xl border transition cursor-pointer flex items-center justify-between ${
-                      membershipType === 'regular' ? 'border-[#0A5C36] bg-emerald-50/40' : 'border-stone-200 bg-white'
+                      membershipType === 'regular'
+                        ? 'border-[#0A5C36] bg-emerald-50/40'
+                        : 'border-stone-200 bg-white'
                     }`}
                   >
                     <div className="flex items-center space-x-3">
-                      <input 
-                        type="radio" 
-                        name="membershipType" 
+                      <input
+                        type="radio"
+                        name="membershipType"
                         checked={membershipType === 'regular'}
                         onChange={() => setMembershipType('regular')}
                         className="accent-[#0A5C36]"
@@ -207,16 +210,18 @@ export default function RegisterMember() {
                     <span className="font-extrabold text-xs text-stone-900">₱450.00</span>
                   </div>
 
-                  <div 
+                  <div
                     onClick={() => setMembershipType('student')}
                     className={`p-3 rounded-2xl border transition cursor-pointer flex items-center justify-between ${
-                      membershipType === 'student' ? 'border-[#0A5C36] bg-emerald-50/40' : 'border-stone-200 bg-white'
+                      membershipType === 'student'
+                        ? 'border-[#0A5C36] bg-emerald-50/40'
+                        : 'border-stone-200 bg-white'
                     }`}
                   >
                     <div className="flex items-center space-x-3">
-                      <input 
-                        type="radio" 
-                        name="membershipType" 
+                      <input
+                        type="radio"
+                        name="membershipType"
                         checked={membershipType === 'student'}
                         onChange={() => setMembershipType('student')}
                         className="accent-[#0A5C36]"
@@ -224,7 +229,9 @@ export default function RegisterMember() {
                       <div>
                         <div className="flex items-center space-x-1.5">
                           <p className="text-xs font-bold text-stone-800">Student Rate</p>
-                          <span className="px-1.5 py-0.5 bg-blue-100 text-blue-700 text-[9px] font-extrabold rounded-md">Special</span>
+                          <span className="px-1.5 py-0.5 bg-blue-100 text-blue-700 text-[9px] font-extrabold rounded-md">
+                            Special
+                          </span>
                         </div>
                         <p className="text-[10px] text-stone-400">Requires valid student ID verification</p>
                       </div>
@@ -234,24 +241,30 @@ export default function RegisterMember() {
                 </div>
               </div>
 
-              {/* Payment Method */}
               <div>
-                <label className="block text-[10px] font-extrabold text-stone-400 uppercase tracking-wider mb-2">Payment Method</label>
+                <label className="block text-[10px] font-extrabold text-stone-400 uppercase tracking-wider mb-2">
+                  Payment Method
+                </label>
                 <div className="grid grid-cols-2 gap-3">
                   <button
                     type="button"
                     onClick={() => setPaymentMethod('cash')}
                     className={`py-2.5 rounded-xl text-xs font-bold border transition cursor-pointer flex items-center justify-center space-x-2 ${
-                      paymentMethod === 'cash' ? 'border-[#0A5C36] bg-[#0A5C36] text-white' : 'border-stone-200 bg-white text-stone-700'
+                      paymentMethod === 'cash'
+                        ? 'border-[#0A5C36] bg-[#0A5C36] text-white'
+                        : 'border-stone-200 bg-white text-stone-700'
                     }`}
                   >
                     <span>💵 Cash</span>
                   </button>
+
                   <button
                     type="button"
                     onClick={() => setPaymentMethod('gcash')}
                     className={`py-2.5 rounded-xl text-xs font-bold border transition cursor-pointer flex items-center justify-center space-x-2 ${
-                      paymentMethod === 'gcash' ? 'border-[#0A5C36] bg-[#0A5C36] text-white' : 'border-stone-200 bg-white text-stone-700'
+                      paymentMethod === 'gcash'
+                        ? 'border-[#0A5C36] bg-[#0A5C36] text-white'
+                        : 'border-stone-200 bg-white text-stone-700'
                     }`}
                   >
                     <span>📱 GCash</span>
@@ -259,7 +272,6 @@ export default function RegisterMember() {
                 </div>
               </div>
 
-              {/* GCash QR Section */}
               {paymentMethod === 'gcash' && (
                 <div className="bg-stone-50 p-3 rounded-2xl border border-stone-200 space-y-2">
                   <div className="flex items-center space-x-3">
@@ -272,9 +284,12 @@ export default function RegisterMember() {
                       <p className="text-[10px] text-emerald-700">📷 Scan with GCash App</p>
                     </div>
                   </div>
+
                   <div>
-                    <label className="block text-[10px] font-bold text-stone-500 mb-1">Input Reference Number</label>
-                    <input 
+                    <label className="block text-[10px] font-bold text-stone-500 mb-1">
+                      Input Reference Number
+                    </label>
+                    <input
                       type="text"
                       placeholder="Enter 13-digit reference"
                       value={refNumber}
@@ -286,13 +301,11 @@ export default function RegisterMember() {
                 </div>
               )}
 
-              {/* Amount Due Display */}
               <div className="flex items-center justify-between bg-stone-50 p-3 rounded-2xl border border-stone-200">
                 <span className="text-xs font-bold text-stone-500">Amount Due</span>
                 <span className="text-lg font-extrabold text-orange-600">{amountDue}</span>
               </div>
 
-              {/* Action Buttons */}
               <div className="flex items-center space-x-3 pt-2">
                 <button
                   type="button"
@@ -301,11 +314,14 @@ export default function RegisterMember() {
                 >
                   Cancel
                 </button>
+
                 <button
                   type="submit"
                   className="w-2/3 py-3 bg-[#0A5C36] hover:bg-[#074729] text-white rounded-xl text-xs font-bold shadow-md transition cursor-pointer"
                 >
-                  {paymentMethod === 'gcash' ? `Confirm & Complete (${amountDue})` : `Complete Registration & Pay (${amountDue})`}
+                  {paymentMethod === 'gcash'
+                    ? `Confirm & Complete (${amountDue})`
+                    : `Complete Registration & Pay (${amountDue})`}
                 </button>
               </div>
             </form>
