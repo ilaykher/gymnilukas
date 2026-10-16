@@ -1,5 +1,6 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
+import logoImage from '../../assets/logo.jpg'; 
 
 export default function AdminSidebar() {
   const location = useLocation();
@@ -9,10 +10,12 @@ export default function AdminSidebar() {
     <aside className="w-64 bg-[#0A5C36] text-white flex flex-col justify-between hidden md:flex select-none shrink-0">
       <div>
         <div className="p-6 flex items-center space-x-3 border-b border-[#0f7a4a]">
-          <div className="w-9 h-9 bg-white/10 rounded-xl flex items-center justify-center">
-            <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3.75 13.5l10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75z" />
-            </svg>
+          <div className="w-10 h-10 rounded-xl overflow-hidden bg-white/10 flex items-center justify-center shrink-0 border border-white/20 shadow-sm">
+            <img 
+              src={logoImage} 
+              alt="Gym ni Lucas Logo" 
+              className="w-full h-full object-cover"
+            />
           </div>
           <div>
             <h1 className="font-bold text-base leading-tight">Gym ni Lucas</h1>

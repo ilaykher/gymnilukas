@@ -51,16 +51,27 @@ export default function DashboardLayout() {
             </button>
 
             {dropdownOpen && (
-              <div className="absolute right-0 mt-2 w-48 bg-white border border-stone-200 rounded-2xl shadow-xl py-1.5 z-50">
-                <button 
-                  onClick={handleLogout}
-                  className="w-full px-4 py-2.5 text-left text-xs font-semibold text-red-600 hover:bg-red-50 transition flex items-center space-x-2 cursor-pointer"
-                >
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-                  </svg>
-                  <span>Logout</span>
-                </button>
+              <div className="absolute right-0 mt-2 w-64 bg-white border border-stone-200 rounded-2xl shadow-xl overflow-hidden z-50 animate-in fade-in zoom-in duration-150">
+                {/* Profile Header Details (Eksaktong kapareho ng Admin UI styling) */}
+                <div className="p-4 bg-[#f9faf8] space-y-1">
+                  <h4 className="font-bold text-stone-900 text-sm">Lucas Staff</h4>
+                  <span className="inline-block px-2.5 py-0.5 bg-emerald-100 text-emerald-800 text-xs font-semibold rounded-md">
+                    Front-Desk
+                  </span>
+                </div>
+
+                {/* Divider & Logout Action */}
+                <div className="border-t border-stone-100 p-2 bg-white">
+                  <button 
+                    onClick={handleLogout}
+                    className="w-full px-3 py-2.5 text-left font-bold text-red-600 hover:bg-red-50 rounded-xl transition flex items-center space-x-2.5 cursor-pointer"
+                  >
+                    <svg className="w-4 h-4 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                    </svg>
+                    <span className="text-sm">Log Out</span>
+                  </button>
+                </div>
               </div>
             )}
           </div>
