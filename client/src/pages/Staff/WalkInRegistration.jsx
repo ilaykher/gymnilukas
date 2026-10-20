@@ -26,7 +26,7 @@ export default function WalkInRegistration() {
           onClick={() => navigate('/')} 
           className="text-emerald-700 dark:text-emerald-400 hover:text-emerald-800 dark:hover:text-emerald-300 text-sm font-semibold flex items-center space-x-1 transition cursor-pointer self-start md:self-auto"
         >
-          <span>← Back to Check-in</span>
+          <span>← Back to Dashboard</span>
         </button>
       </div>
 
@@ -130,7 +130,7 @@ export default function WalkInRegistration() {
       </div>
 
       {/* Walk-Ins Today Footer Card */}
-      <div className="bg-white dark:bg-neutral-900 p-4 rounded-2xl border border-stone-200 dark:border-neutral-800 shadow-sm inline-block min-w-[200px] transition-colors duration-200">
+      <div className="bg-white dark:bg-neutral-900 p-4 rounded-2xl border border-stone-200 dark:border-neutral-800 shadow-sm inline-block min-w-50 transition-colors duration-200">
         <div className="flex items-center space-x-3">
           <div className="w-10 h-10 bg-stone-100 dark:bg-neutral-800 rounded-xl flex items-center justify-center text-stone-600 dark:text-neutral-300">
             👥

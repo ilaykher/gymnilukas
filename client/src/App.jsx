@@ -10,6 +10,7 @@ import Members from './pages/Staff/Members';
 import MemberProfile from './pages/Staff/MemberProfile';
 import MemberCheckIn from './pages/Staff/MemberCheckIn';
 import WalkInRegistration from './pages/Staff/WalkInRegistration';
+import RealtimeActivity from './pages/Staff/RealtimeActivity';
 import RegisterMember from './pages/Staff/RegisterMember';
 
 import AdminDashboard from './pages/Admin/AdminDashboard';
@@ -34,6 +35,7 @@ export default function App() {
             <Route path="/members" element={<Members />} />
             <Route path="/member-profile" element={<MemberProfile />} />
             <Route path="/check-in" element={<MemberCheckIn />} />
+            <Route path="/realtime-activity" element={<RealtimeActivity />} />
 
             <Route
               path="/walk-in-registration"

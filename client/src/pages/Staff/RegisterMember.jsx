@@ -151,7 +151,7 @@ export default function RegisterMember() {
 
       {showPaymentModal && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-xs flex items-center justify-center z-50 p-4">
-          <div className="bg-white dark:bg-neutral-900 rounded-3xl border border-stone-200 dark:border-neutral-800 shadow-2xl max-w-md w-full overflow-hidden p-6 relative animate-in fade-in zoom-in duration-200 transition-colors duration-200">
+          <div className="bg-white dark:bg-neutral-900 rounded-3xl border border-stone-200 dark:border-neutral-800 shadow-2xl max-w-md w-full overflow-hidden p-6 relative animate-in fade-in zoom-in transition-colors duration-200">
             <div className="flex items-center justify-between pb-4 border-b border-stone-100 dark:border-neutral-800 mb-4">
               <h3 className="text-lg font-extrabold text-stone-900 dark:text-white">Complete Member Payment</h3>
               <button

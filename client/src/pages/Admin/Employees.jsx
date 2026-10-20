@@ -123,7 +123,7 @@ export default function Employees() {
 
       {isEditModalOpen && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-xs flex items-center justify-center z-50 p-4">
-          <div className="bg-white dark:bg-neutral-900 rounded-3xl border border-stone-200 dark:border-neutral-800 shadow-2xl max-w-lg w-full overflow-hidden animate-in fade-in zoom-in duration-200 transition-colors duration-200">
+          <div className="bg-white dark:bg-neutral-900 rounded-3xl border border-stone-200 dark:border-neutral-800 shadow-2xl max-w-lg w-full overflow-hidden animate-in fade-in zoom-in duration-200 transition-colors">
             <div className="p-6 border-b border-stone-200 dark:border-neutral-800 flex items-center justify-between">
               <h3 className="text-lg font-bold text-stone-900 dark:text-white">Edit Staff Member</h3>
               <button
@@ -237,7 +237,7 @@ export default function Employees() {
 
       {isResetModalOpen && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-xs flex items-center justify-center z-50 p-4">
-          <div className="bg-white dark:bg-neutral-900 rounded-3xl border border-stone-200 dark:border-neutral-800 shadow-2xl max-w-md w-full overflow-hidden animate-in fade-in zoom-in duration-200 transition-colors duration-200">
+          <div className="bg-white dark:bg-neutral-900 rounded-3xl border border-stone-200 dark:border-neutral-800 shadow-2xl max-w-md w-full overflow-hidden animate-in fade-in zoom-in duration-200 transition-colors">
             <div className="p-6 border-b border-stone-200 dark:border-neutral-800 flex items-center justify-between">
               <h3 className="text-lg font-bold text-stone-900 dark:text-white">Reset Password</h3>
               <button

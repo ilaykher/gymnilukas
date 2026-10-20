@@ -244,7 +244,7 @@ export default function AdminDashboard() {
             </button>
 
             {dropdownOpen && (
-              <div className="absolute right-0 mt-2 w-64 bg-white dark:bg-neutral-900 border border-stone-200 dark:border-neutral-800 rounded-2xl shadow-xl py-3 px-4 z-50 animate-in fade-in zoom-in-95 duration-150 transition-colors duration-200">
+              <div className="absolute right-0 mt-2 w-64 bg-white dark:bg-neutral-900 border border-stone-200 dark:border-neutral-800 rounded-2xl shadow-xl py-3 px-4 z-50 animate-in fade-in zoom-in-95 transition-colors duration-200">
                 <div className="pb-3 border-b border-stone-100 dark:border-neutral-800">
                   <h4 className="font-bold text-stone-900 dark:text-white text-sm">Lucas Admin</h4>
                   <span className="inline-block mt-1 px-2.5 py-0.5 bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 text-[11px] font-semibold rounded-md">
