@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
+import AlertModal from '../../components/AlertModal';
 
 export default function RegisterEmployee() {
   const navigate = useNavigate();
+  const [alertState, setAlertState] = useState(null);
   const [formData, setFormData] = useState({
     fullName: '',
     role: '',
@@ -22,23 +24,36 @@ export default function RegisterEmployee() {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    alert(`Staff member ${formData.fullName} successfully registered!`);
+    setAlertState({
+      type: 'success',
+      title: 'Staff Registered',
+      message: `Staff member ${formData.fullName} successfully registered!`,
+    });
+  };
+
+  const closeAlert = () => {
+    setAlertState(null);
     navigate('/admin/employees');
   };
 
   return (
     <div className="max-w-4xl mx-auto space-y-6 select-none py-4 transition-colors duration-200">
-      {/* Back Link */}
-      <div>
-        <Link to="/admin/employees" className="text-xs font-semibold text-stone-500 dark:text-neutral-400 hover:text-stone-800 dark:hover:text-neutral-200 transition flex items-center space-x-1">
-          <span>← Back to Employees</span>
-        </Link>
-      </div>
+      {/* Header Title + Back button (right side, in line with the title) */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h2 className="text-2xl font-extrabold text-stone-900 dark:text-white">Register New Employee</h2>
+          <p className="text-stone-500 dark:text-neutral-400 text-xs mt-0.5">Fill in the details below to add a new staff member to the system.</p>
+        </div>
 
-      {/* Header Title */}
-      <div>
-        <h2 className="text-2xl font-extrabold text-stone-900 dark:text-white">Register New Employee</h2>
-        <p className="text-stone-500 dark:text-neutral-400 text-xs mt-0.5">Fill in the details below to add a new staff member to the system.</p>
+        <Link
+          to="/admin/employees"
+          className="self-start sm:self-auto inline-flex items-center space-x-2 px-4 py-2.5 rounded-xl border border-stone-300 dark:border-neutral-700 bg-white dark:bg-neutral-900 text-stone-700 dark:text-neutral-200 hover:bg-stone-50 dark:hover:bg-neutral-800 text-sm font-semibold shadow-sm transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0A5C36]"
+        >
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7" />
+          </svg>
+          <span>Back to Employees</span>
+        </Link>
       </div>
 
       {/* Form Card Container */}
@@ -160,6 +175,8 @@ export default function RegisterEmployee() {
           </div>
         </form>
       </div>
+
+      <AlertModal alert={alertState} onClose={closeAlert} />
     </div>
   );
 }

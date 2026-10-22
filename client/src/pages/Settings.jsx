@@ -2,11 +2,13 @@
 import React, { useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useTheme } from '../context/ThemeContext';
+import AlertModal from '../components/AlertModal';
 
 export default function Settings() {
   const location = useLocation();
   const isAdmin = location.pathname.startsWith('/admin');
   const { isDarkMode, toggleDarkMode } = useTheme();
+  const [alertState, setAlertState] = useState(null);
 
   const [plans, setPlans] = useState([
     {
@@ -39,7 +41,11 @@ export default function Settings() {
 
   const handleSave = (planName) => {
     if (!isAdmin) return;
-    alert(`Successfully saved changes for ${planName}!`);
+    setAlertState({
+      type: 'success',
+      title: 'Changes Saved',
+      message: `Successfully saved changes for ${planName}!`,
+    });
   };
 
   const cardClass = isDarkMode
@@ -283,6 +289,8 @@ export default function Settings() {
           </table>
         </div>
       </section>
+
+      <AlertModal alert={alertState} onClose={() => setAlertState(null)} />
     </div>
   );
 }

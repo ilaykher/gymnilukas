@@ -8,7 +8,7 @@ import DashboardLayout from './layouts/DashboardLayout';
 import StaffDashboard from './pages/Staff/StaffDashboard';
 import Members from './pages/Staff/Members';
 import MemberProfile from './pages/Staff/MemberProfile';
-import MemberCheckIn from './pages/Staff/MemberCheckIn';
+import MemberCheckin from './pages/Staff/MemberCheckin';
 import WalkInRegistration from './pages/Staff/WalkInRegistration';
 import RealtimeActivity from './pages/Staff/RealtimeActivity';
 import RegisterMember from './pages/Staff/RegisterMember';
@@ -34,7 +34,7 @@ export default function App() {
             <Route path="/" element={<StaffDashboard />} />
             <Route path="/members" element={<Members />} />
             <Route path="/member-profile" element={<MemberProfile />} />
-            <Route path="/check-in" element={<MemberCheckIn />} />
+            <Route path="/check-in" element={<MemberCheckin />} />
             <Route path="/realtime-activity" element={<RealtimeActivity />} />
 
             <Route

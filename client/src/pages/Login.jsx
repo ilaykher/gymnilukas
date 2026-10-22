@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import AlertModal from '../components/AlertModal';
 
 // Swap this for a local image (e.g. import gymBg from '../assets/gym-bg.jpg') if you prefer.
 const GYM_BG =
@@ -9,6 +10,7 @@ export default function Login() {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [alertState, setAlertState] = useState(null);
   const navigate = useNavigate();
 
   const handleLoginSubmit = (e) => {
@@ -19,7 +21,11 @@ export default function Login() {
     } else if (username === 'staff' && password === 'staff123') {
       navigate('/');
     } else {
-      alert('Invalid username or password! (Use admin/admin123 or staff/staff123)');
+      setAlertState({
+        type: 'error',
+        title: 'Login Failed',
+        message: 'Invalid username or password! (Use admin/admin123 or staff/staff123)',
+      });
     }
   };
 
@@ -90,7 +96,11 @@ export default function Login() {
               href="#forgot"
               onClick={(e) => {
                 e.preventDefault();
-                alert('Password reset link sent.');
+                setAlertState({
+                  type: 'info',
+                  title: 'Password Reset',
+                  message: 'Password reset link sent.',
+                });
               }}
               className="text-xs font-medium text-[#0A5C36] hover:underline"
             >
@@ -115,7 +125,8 @@ export default function Login() {
           Need an account? <span className="text-[#0A5C36] font-semibold cursor-pointer hover:underline">Register here</span>
         </div>
       </div>
+
+      <AlertModal alert={alertState} onClose={() => setAlertState(null)} />
     </div>
   );
 }
-

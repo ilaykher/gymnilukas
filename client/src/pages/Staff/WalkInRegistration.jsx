@@ -1,20 +1,30 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import AlertModal from '../../components/AlertModal';
 
 export default function WalkInRegistration() {
   const navigate = useNavigate();
   const [fullName, setFullName] = useState('');
   const [phoneNumber, setPhoneNumber] = useState('');
   const [amountPaid, setAmountPaid] = useState('');
+  const [alertState, setAlertState] = useState(null);
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    alert(`Matagumpay na na-rehistro si ${fullName} bilang Walk-in!`);
+    setAlertState({
+      type: 'success',
+      title: 'Walk-in Registered',
+      message: `Matagumpay na na-rehistro si ${fullName} bilang Walk-in!`,
+    });
+  };
+
+  const closeAlert = () => {
+    setAlertState(null);
     navigate('/');
   };
 
   return (
-    <div className="space-y-6 max-w-4xl mx-auto pb-10 transition-colors duration-200">
+    <div className="space-y-6 w-full pb-10 transition-colors duration-200">
       
       {/* Header & Back Link */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-2">
@@ -22,11 +32,15 @@ export default function WalkInRegistration() {
           <h2 className="text-2xl font-bold text-stone-900 dark:text-white">Manual Walk-in Registration</h2>
           <p className="text-stone-500 dark:text-neutral-400 text-sm mt-0.5">Quick entry form for non-members and single-session visitors.</p>
         </div>
-        <button 
-          onClick={() => navigate('/')} 
-          className="text-emerald-700 dark:text-emerald-400 hover:text-emerald-800 dark:hover:text-emerald-300 text-sm font-semibold flex items-center space-x-1 transition cursor-pointer self-start md:self-auto"
+        <button
+          type="button"
+          onClick={() => navigate('/')}
+          className="self-start md:self-auto inline-flex items-center space-x-2 px-4 py-2.5 rounded-xl border border-stone-300 dark:border-neutral-700 bg-white dark:bg-neutral-900 text-stone-700 dark:text-neutral-200 hover:bg-stone-50 dark:hover:bg-neutral-800 text-sm font-semibold shadow-sm transition cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0A5C36]"
         >
-          <span>← Back to Dashboard</span>
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7" />
+          </svg>
+          <span>Back to Dashboard</span>
         </button>
       </div>
 
@@ -93,7 +107,7 @@ export default function WalkInRegistration() {
               </label>
               <span className="text-xs text-stone-500 dark:text-neutral-400 font-medium">Suggested: ₱15.00</span>
             </div>
-            <div className="relative max-w-md">
+            <div className="relative">
               <span className="absolute inset-y-0 left-0 flex items-center pl-4 text-stone-400 dark:text-neutral-500 font-bold">₱</span>
               <input
                 type="text"
@@ -142,6 +156,8 @@ export default function WalkInRegistration() {
         </div>
       </div>
 
+
+      <AlertModal alert={alertState} onClose={closeAlert} />
     </div>
   );
 }

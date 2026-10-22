@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import AlertModal from '../../components/AlertModal';
 
 export default function RegisterMember() {
   const navigate = useNavigate();
@@ -17,6 +18,7 @@ export default function RegisterMember() {
   const [membershipType, setMembershipType] = useState('regular');
   const [paymentMethod, setPaymentMethod] = useState('cash');
   const [refNumber, setRefNumber] = useState('');
+  const [alertState, setAlertState] = useState(null);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -30,14 +32,25 @@ export default function RegisterMember() {
 
   const handleCompletePayment = (e) => {
     e.preventDefault();
-    alert(`Monthly Membership Registered Successfully for ${formData.fullName || 'Member'}!`);
-    navigate(-1);
+    setShowPaymentModal(false);
+    setAlertState({
+      type: 'success',
+      title: 'Registration Successful',
+      message: `Monthly Membership Registered Successfully for ${formData.fullName || 'Member'}!`,
+      onClose: () => navigate(-1),
+    });
+  };
+
+  const closeAlert = () => {
+    const afterClose = alertState?.onClose;
+    setAlertState(null);
+    if (afterClose) afterClose();
   };
 
   const amountDue = membershipType === 'regular' ? '₱450.00' : '₱350.00';
 
   return (
-    <div className="max-w-xl mx-auto py-8 select-none transition-colors duration-200">
+    <div className="w-full py-2 select-none transition-colors duration-200">
       <div className="bg-white dark:bg-neutral-900 rounded-3xl border border-stone-200 dark:border-neutral-800 shadow-xl p-8 space-y-6 transition-colors duration-200">
         <div className="text-center">
           <h2 className="text-2xl font-extrabold text-[#0A5C36] dark:text-emerald-400">Register Member</h2>
@@ -46,7 +59,8 @@ export default function RegisterMember() {
           </p>
         </div>
 
-        <form onSubmit={handleOpenPayment} className="space-y-4">
+        <form onSubmit={handleOpenPayment} className="space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
           <div>
             <label className="block text-xs font-bold text-stone-700 dark:text-neutral-300 mb-1">Full Name</label>
             <input
@@ -99,7 +113,7 @@ export default function RegisterMember() {
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="contents">
             <div>
               <label className="block text-xs font-bold text-stone-700 dark:text-neutral-300 mb-1">PIN</label>
               <input
@@ -125,6 +139,8 @@ export default function RegisterMember() {
                 className="w-full px-4 py-3 bg-white dark:bg-neutral-800 border border-stone-200 dark:border-neutral-700 rounded-xl text-stone-800 dark:text-white placeholder-stone-400 dark:placeholder-neutral-500 text-sm focus:outline-none focus:ring-2 focus:ring-[#0A5C36]"
               />
             </div>
+          </div>
+
           </div>
 
           <div className="flex items-center justify-between pt-4">
@@ -327,6 +343,8 @@ export default function RegisterMember() {
           </div>
         </div>
       )}
+
+      <AlertModal alert={alertState} onClose={closeAlert} />
     </div>
   );
 }
