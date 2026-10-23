@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useTheme } from '../context/ThemeContext';
 import AlertModal from '../components/AlertModal';
+import { sanitizeAmount } from '../lib/validators';
 
 export default function Settings() {
   const location = useLocation();
@@ -34,7 +35,7 @@ export default function Settings() {
 
     setPlans((previousPlans) =>
       previousPlans.map((plan) =>
-        plan.id === id ? { ...plan, rate: newRate } : plan
+        plan.id === id ? { ...plan, rate: sanitizeAmount(newRate) } : plan
       )
     );
   };
@@ -257,6 +258,8 @@ export default function Settings() {
                             ? 'opacity-70 cursor-not-allowed'
                             : ''
                         }`}
+                        inputMode="decimal"
+                        aria-label={`${plan.name} rate`}
                       />
 
                       <span className={`text-xs font-medium ${mutedClass}`}>
@@ -268,7 +271,7 @@ export default function Settings() {
                   <td className="py-4 px-6 text-right">
                     <button
                       type="button"
-                      disabled={!isAdmin}
+                      disabled={!isAdmin || !(parseFloat(plan.rate) > 0)}
                       onClick={() => handleSave(plan.name)}
                       className={`px-4 py-1.5 border rounded-xl text-xs font-semibold transition ${
                         isAdmin

@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import FieldError from '../../components/FieldError';
+import { digitsOnly, isBlank, isValidPin } from '../../lib/validators';
 
 const inputClass =
   'w-full pl-10 pr-4 py-3 bg-white dark:bg-neutral-800 border border-stone-200 dark:border-neutral-700 rounded-xl text-stone-800 dark:text-white placeholder-stone-400 dark:placeholder-neutral-500 text-sm focus:outline-none focus:ring-2 focus:ring-[#0A5C36] dark:focus:ring-emerald-500';
@@ -13,8 +15,13 @@ export default function MemberCheckIn() {
   const [pin, setPin] = useState('');
   const [isSuccessModalOpen, setIsSuccessModalOpen] = useState(false);
 
+  // Both fields are required; the PIN must be exactly 4 digits.
+  const isFormValid = !isBlank(username) && isValidPin(pin);
+  const pinError = pin && !isValidPin(pin) ? `PIN must be exactly 4 digits (${pin.length}/4).` : '';
+
   const handleCheckIn = (e) => {
     e.preventDefault();
+    if (!isFormValid) return;
     setIsSuccessModalOpen(true);
   };
 
@@ -74,17 +81,29 @@ export default function MemberCheckIn() {
                   type="password"
                   placeholder="Enter PIN"
                   value={pin}
-                  onChange={(e) => setPin(e.target.value)}
+                  onChange={(e) => setPin(digitsOnly(e.target.value, 4))}
                   required
                   className={inputClass}
+                  inputMode="numeric"
+                  maxLength={4}
+                  aria-invalid={pinError ? 'true' : undefined}
+                  aria-describedby={pinError ? 'checkin-pin-error' : undefined}
                 />
+                <FieldError id="checkin-pin-error">{pinError}</FieldError>
               </div>
             </div>
           </div>
 
+          {!isFormValid && (
+            <p className="text-xs text-stone-500 dark:text-neutral-400 text-center">
+              Enter your username and 4-digit PIN to check in.
+            </p>
+          )}
+
           <button
             type="submit"
-            className="w-full py-3.5 bg-[#004D40] hover:bg-[#00382E] text-white rounded-xl text-sm font-bold shadow-md transition flex items-center justify-center space-x-2 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[#0A5C36] dark:focus-visible:ring-offset-neutral-900"
+            disabled={!isFormValid}
+            className="w-full py-3.5 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-[#004D40] bg-[#004D40] hover:bg-[#00382E] text-white rounded-xl text-sm font-bold shadow-md transition flex items-center justify-center space-x-2 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[#0A5C36] dark:focus-visible:ring-offset-neutral-900"
           >
             <span>Check-In</span>
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">

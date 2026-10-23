@@ -120,10 +120,6 @@ export default function Login() {
             </button>
           </div>
         </form>
-
-        <div className="text-center text-xs text-stone-500 pt-2">
-          Need an account? <span className="text-[#0A5C36] font-semibold cursor-pointer hover:underline">Register here</span>
-        </div>
       </div>
 
       <AlertModal alert={alertState} onClose={() => setAlertState(null)} />

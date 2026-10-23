@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import AlertModal from '../../components/AlertModal';
+import FieldError from '../../components/FieldError';
+import { stripDigits, digitsOnly, isBlank, isValidPhone, getPhoneError, isValidPin, isValidReference } from '../../lib/validators';
 
 export default function RegisterMember() {
   const navigate = useNavigate();
@@ -22,16 +24,22 @@ export default function RegisterMember() {
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
+    let next = value;
+    if (name === 'fullName') next = stripDigits(value); // no numbers in names
+    if (name === 'contactNumber') next = digitsOnly(value, 11); // numbers only, 11 digits
+    if (name === 'pin') next = digitsOnly(value, 4); // numbers only, 4 digits
+    setFormData(prev => ({ ...prev, [name]: next }));
   };
 
   const handleOpenPayment = (e) => {
     e.preventDefault();
+    if (!isFormValid) return;
     setShowPaymentModal(true);
   };
 
   const handleCompletePayment = (e) => {
     e.preventDefault();
+    if (!isReferenceValid) return;
     setShowPaymentModal(false);
     setAlertState({
       type: 'success',
@@ -48,6 +56,25 @@ export default function RegisterMember() {
   };
 
   const amountDue = membershipType === 'regular' ? '₱450.00' : '₱350.00';
+
+  // All fields are required except weight.
+  const isFormValid =
+    !isBlank(formData.fullName) &&
+    !isBlank(formData.username) &&
+    isValidPhone(formData.contactNumber) &&
+    !isBlank(formData.address) &&
+    isValidPin(formData.pin);
+
+  // GCash needs a 13-digit reference number; cash needs nothing extra.
+  const isReferenceValid = paymentMethod === 'cash' || isValidReference(refNumber);
+
+  const contactError = getPhoneError(formData.contactNumber);
+  const pinError =
+    formData.pin && !isValidPin(formData.pin) ? `PIN must be exactly 4 digits (${formData.pin.length}/4).` : '';
+  const refError =
+    refNumber && !isValidReference(refNumber)
+      ? `Reference number must be exactly 13 digits (${refNumber.length}/13).`
+      : '';
 
   return (
     <div className="w-full py-2 select-none transition-colors duration-200">
@@ -92,12 +119,17 @@ export default function RegisterMember() {
             <input
               type="text"
               name="contactNumber"
-              placeholder="09XX XXX XXXX"
+              placeholder="09XXXXXXXXX"
               value={formData.contactNumber}
               onChange={handleInputChange}
               required
               className="w-full px-4 py-3 bg-white dark:bg-neutral-800 border border-stone-200 dark:border-neutral-700 rounded-xl text-stone-800 dark:text-white placeholder-stone-400 dark:placeholder-neutral-500 text-sm focus:outline-none focus:ring-2 focus:ring-[#0A5C36]"
+              inputMode="numeric"
+              maxLength={11}
+              aria-invalid={contactError ? 'true' : undefined}
+              aria-describedby={contactError ? 'contact-error' : undefined}
             />
+            <FieldError id="contact-error">{contactError}</FieldError>
           </div>
 
           <div>
@@ -125,7 +157,11 @@ export default function RegisterMember() {
                 onChange={handleInputChange}
                 required
                 className="w-full px-4 py-3 bg-white dark:bg-neutral-800 border border-stone-200 dark:border-neutral-700 rounded-xl text-stone-800 dark:text-white placeholder-stone-400 dark:placeholder-neutral-500 text-sm focus:outline-none focus:ring-2 focus:ring-[#0A5C36]"
+                inputMode="numeric"
+                aria-invalid={pinError ? 'true' : undefined}
+                aria-describedby={pinError ? 'pin-error' : undefined}
               />
+              <FieldError id="pin-error">{pinError}</FieldError>
             </div>
 
             <div>
@@ -143,6 +179,10 @@ export default function RegisterMember() {
 
           </div>
 
+          {!isFormValid && (
+            <p className="text-xs text-stone-500 dark:text-neutral-400">All fields are required except weight.</p>
+          )}
+
           <div className="flex items-center justify-between pt-4">
             <button
               type="button"
@@ -154,7 +194,8 @@ export default function RegisterMember() {
 
             <button
               type="submit"
-              className="px-8 py-3.5 bg-[#0A5C36] hover:bg-[#074729] text-white rounded-xl text-sm font-bold shadow-md transition flex items-center space-x-2 cursor-pointer"
+              disabled={!isFormValid}
+              className="px-8 py-3.5 bg-[#0A5C36] hover:bg-[#074729] text-white rounded-xl text-sm font-bold shadow-md transition flex items-center space-x-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-[#0A5C36]"
             >
               <span>Register</span>
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -308,10 +349,15 @@ export default function RegisterMember() {
                       type="text"
                       placeholder="Enter 13-digit reference"
                       value={refNumber}
-                      onChange={(e) => setRefNumber(e.target.value)}
+                      onChange={(e) => setRefNumber(digitsOnly(e.target.value, 13))}
                       required
                       className="w-full px-3 py-2 bg-white dark:bg-neutral-800 border border-stone-200 dark:border-neutral-700 rounded-xl text-xs text-stone-800 dark:text-white placeholder-stone-400 dark:placeholder-neutral-500 focus:outline-none focus:ring-1 focus:ring-[#0A5C36]"
+                      inputMode="numeric"
+                      maxLength={13}
+                      aria-invalid={refError ? 'true' : undefined}
+                      aria-describedby={refError ? 'ref-error' : undefined}
                     />
+                    <FieldError id="ref-error">{refError}</FieldError>
                   </div>
                 </div>
               )}
@@ -332,11 +378,10 @@ export default function RegisterMember() {
 
                 <button
                   type="submit"
-                  className="w-2/3 py-3 bg-[#0A5C36] hover:bg-[#074729] text-white rounded-xl text-xs font-bold shadow-md transition cursor-pointer"
+                  disabled={!isReferenceValid}
+                  className="w-2/3 py-3 bg-[#0A5C36] hover:bg-[#074729] text-white rounded-xl text-xs font-bold shadow-md transition cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-[#0A5C36]"
                 >
-                  {paymentMethod === 'gcash'
-                    ? `Confirm & Complete (${amountDue})`
-                    : `Complete Registration & Pay (${amountDue})`}
+                  {paymentMethod === 'gcash' ? 'Confirm & Complete' : 'Complete Registration & Pay'}
                 </button>
               </div>
             </form>

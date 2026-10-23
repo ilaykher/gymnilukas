@@ -1,6 +1,13 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import AlertModal from '../../components/AlertModal';
+import FieldError from '../../components/FieldError';
+import { stripDigits, digitsOnly, sanitizeAmount, isBlank, isValidPhone, getPhoneError } from '../../lib/validators';
+
+const SUGGESTED_RATE = 15; // Day Pass rate in PHP
+
+const formatPeso = (amount) =>
+  `₱${amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
 export default function WalkInRegistration() {
   const navigate = useNavigate();
@@ -9,12 +16,30 @@ export default function WalkInRegistration() {
   const [amountPaid, setAmountPaid] = useState('');
   const [alertState, setAlertState] = useState(null);
 
+  const amountValue = parseFloat(amountPaid);
+  const isAmountValid = amountPaid !== '' && !Number.isNaN(amountValue) && amountValue >= SUGGESTED_RATE;
+
+  // All fields are required; the amount must be at least the suggested rate.
+  const isFormValid = !isBlank(fullName) && isValidPhone(phoneNumber) && isAmountValid;
+
+  const phoneError = getPhoneError(phoneNumber);
+  const amountError =
+    amountPaid !== '' && !isAmountValid ? `Amount must be at least ${formatPeso(SUGGESTED_RATE)}.` : '';
+
   const handleSubmit = (e) => {
     e.preventDefault();
+    if (!isFormValid) return;
+
+    // Work in cents to avoid floating-point rounding errors.
+    const changeCents = Math.round(amountValue * 100) - Math.round(SUGGESTED_RATE * 100);
+
     setAlertState({
       type: 'success',
       title: 'Walk-in Registered',
-      message: `Matagumpay na na-rehistro si ${fullName} bilang Walk-in!`,
+      message:
+        changeCents > 0
+          ? `Change: ${formatPeso(changeCents / 100)}`
+          : `${fullName.trim()} has been successfully registered as a walk-in!`,
     });
   };
 
@@ -67,7 +92,7 @@ export default function WalkInRegistration() {
                 type="text"
                 placeholder="Julia Dizon"
                 value={fullName}
-                onChange={(e) => setFullName(e.target.value)}
+                onChange={(e) => setFullName(stripDigits(e.target.value))}
                 className="w-full px-4 py-3 bg-white dark:bg-neutral-800 border border-stone-300 dark:border-neutral-700 rounded-xl text-stone-800 dark:text-white placeholder-stone-400 dark:placeholder-neutral-500 text-sm focus:outline-none focus:ring-2 focus:ring-[#0A5C36]"
                 required
               />
@@ -79,12 +104,17 @@ export default function WalkInRegistration() {
               </label>
               <input
                 type="text"
-                placeholder="09XX XXX 0001"
+                placeholder="09XXXXXXXXX"
                 value={phoneNumber}
-                onChange={(e) => setPhoneNumber(e.target.value)}
+                onChange={(e) => setPhoneNumber(digitsOnly(e.target.value, 11))}
                 className="w-full px-4 py-3 bg-white dark:bg-neutral-800 border border-stone-300 dark:border-neutral-700 rounded-xl text-stone-800 dark:text-white placeholder-stone-400 dark:placeholder-neutral-500 text-sm focus:outline-none focus:ring-2 focus:ring-[#0A5C36]"
                 required
+                inputMode="numeric"
+                maxLength={11}
+                aria-invalid={phoneError ? 'true' : undefined}
+                aria-describedby={phoneError ? 'walkin-phone-error' : undefined}
               />
+              <FieldError id="walkin-phone-error">{phoneError}</FieldError>
             </div>
           </div>
 
@@ -105,7 +135,7 @@ export default function WalkInRegistration() {
               <label className="text-xs font-semibold text-stone-500 dark:text-neutral-400 uppercase tracking-wider">
                 Amount Paid
               </label>
-              <span className="text-xs text-stone-500 dark:text-neutral-400 font-medium">Suggested: ₱15.00</span>
+              <span className="text-xs text-stone-500 dark:text-neutral-400 font-medium">Suggested: {formatPeso(SUGGESTED_RATE)}</span>
             </div>
             <div className="relative">
               <span className="absolute inset-y-0 left-0 flex items-center pl-4 text-stone-400 dark:text-neutral-500 font-bold">₱</span>
@@ -113,12 +143,20 @@ export default function WalkInRegistration() {
                 type="text"
                 placeholder="0.00"
                 value={amountPaid}
-                onChange={(e) => setAmountPaid(e.target.value)}
+                onChange={(e) => setAmountPaid(sanitizeAmount(e.target.value))}
                 className="w-full pl-9 pr-4 py-3 bg-white dark:bg-neutral-800 border border-stone-300 dark:border-neutral-700 rounded-xl text-stone-800 dark:text-white placeholder-stone-400 dark:placeholder-neutral-500 text-sm focus:outline-none focus:ring-2 focus:ring-[#0A5C36]"
                 required
+                inputMode="decimal"
+                aria-invalid={amountError ? 'true' : undefined}
+                aria-describedby={amountError ? 'walkin-amount-error' : undefined}
               />
             </div>
+            <FieldError id="walkin-amount-error">{amountError}</FieldError>
           </div>
+
+          {!isFormValid && (
+            <p className="text-xs text-stone-500 dark:text-neutral-400">All fields are required.</p>
+          )}
 
           {/* Bottom Buttons */}
           <div className="flex items-center justify-end space-x-3 pt-4 border-t border-stone-200 dark:border-neutral-800">
@@ -131,7 +169,8 @@ export default function WalkInRegistration() {
             </button>
             <button
               type="submit"
-              className="px-6 py-2.5 bg-orange-600 hover:bg-orange-700 text-white font-semibold rounded-xl text-sm shadow-md transition flex items-center space-x-2 cursor-pointer"
+              disabled={!isFormValid}
+              className="px-6 py-2.5 bg-orange-600 hover:bg-orange-700 text-white font-semibold rounded-xl text-sm shadow-md transition flex items-center space-x-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-orange-600"
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
