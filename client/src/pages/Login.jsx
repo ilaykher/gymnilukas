@@ -19,7 +19,7 @@ export default function Login() {
     if (username === 'admin' && password === 'admin123') {
       navigate('/admin');
     } else if (username === 'staff' && password === 'staff123') {
-      navigate('/');
+      navigate('/dashboard');
     } else {
       setAlertState({
         type: 'error',

@@ -1,6 +1,5 @@
-
 import React from 'react';
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { ThemeProvider } from './context/ThemeContext';
 
 import DashboardLayout from './layouts/DashboardLayout';
@@ -14,7 +13,6 @@ import RealtimeActivity from './pages/Staff/RealtimeActivity';
 import RegisterMember from './pages/Staff/RegisterMember';
 
 import AdminDashboard from './pages/Admin/AdminDashboard';
-import RegisterEmployee from './pages/Admin/RegisterEmployee';
 
 import Settings from './pages/Settings';
 import Login from './pages/Login';
@@ -24,6 +22,8 @@ export default function App() {
     <ThemeProvider>
       <BrowserRouter>
         <Routes>
+          {/* The app always starts at the login page */}
+          <Route path="/" element={<Navigate to="/login" replace />} />
           <Route path="/login" element={<Login />} />
 
           {/* Admin routes */}
@@ -31,7 +31,7 @@ export default function App() {
 
           {/* Staff routes */}
           <Route element={<DashboardLayout />}>
-            <Route path="/" element={<StaffDashboard />} />
+            <Route path="/dashboard" element={<StaffDashboard />} />
             <Route path="/members" element={<Members />} />
             <Route path="/member-profile" element={<MemberProfile />} />
             <Route path="/check-in" element={<MemberCheckin />} />
@@ -45,6 +45,9 @@ export default function App() {
             <Route path="/register-member" element={<RegisterMember />} />
             <Route path="/settings" element={<Settings />} />
           </Route>
+
+          {/* Unknown URLs go back to login */}
+          <Route path="*" element={<Navigate to="/login" replace />} />
         </Routes>
       </BrowserRouter>
     </ThemeProvider>

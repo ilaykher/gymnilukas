@@ -3,7 +3,7 @@ import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import Sidebar from '../components/staff/Sidebar';
 
 // Pages that use the full width of the content area (no max-w cap)
-const FULL_WIDTH_PATHS = ['/', '/realtime-activity', '/check-in', '/register-member', '/walk-in-registration'];
+const FULL_WIDTH_PATHS = ['/dashboard', '/realtime-activity', '/check-in', '/register-member', '/walk-in-registration'];
 
 const CHECK_IN_PATH = '/check-in';
 const BREAK_KEY = 'staffOnBreak';
@@ -142,7 +142,7 @@ export default function DashboardLayout() {
     if (location.pathname === '/walk-in-registration') return 'Walk-In Registration';
     if (location.pathname === '/realtime-activity') return 'Real-time Activity';
     if (location.pathname === '/check-in') return 'Member Check-In';
-    if (location.pathname === '/register-member' || location.pathname === '/') return 'Gym Management';
+    if (location.pathname === '/register-member' || location.pathname === '/dashboard') return 'Gym Management';
     if (location.pathname === '/settings') return 'Settings';
     return 'Gym Management';
   };
