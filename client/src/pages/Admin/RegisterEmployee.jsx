@@ -13,6 +13,10 @@ import {
   PASSWORD_RULES,
 } from '../../lib/validators';
 
+const inputClass =
+  'w-full px-4 py-3 bg-white dark:bg-neutral-800 border border-stone-200 dark:border-neutral-700 rounded-xl text-stone-800 dark:text-white placeholder-stone-400 dark:placeholder-neutral-500 text-sm focus:outline-none focus:ring-2 focus:ring-[#0A5C36]';
+const labelClass = 'block text-xs font-bold text-stone-700 dark:text-neutral-300 mb-1.5';
+
 export default function RegisterEmployee() {
   const navigate = useNavigate();
   const [alertState, setAlertState] = useState(null);
@@ -65,9 +69,10 @@ export default function RegisterEmployee() {
   };
 
   return (
-    <div className="max-w-4xl mx-auto space-y-6 select-none py-4 transition-colors duration-200">
+    // No max-width, centering or outer padding: the page uses the full content area.
+    <div className="w-full space-y-4 transition-colors duration-200">
       {/* Header Title + Back button (right side, in line with the title) */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
           <h2 className="text-2xl font-extrabold text-stone-900 dark:text-white">Register New Employee</h2>
           <p className="text-stone-500 dark:text-neutral-400 text-xs mt-0.5">Fill in the details below to add a new staff member to the system.</p>
@@ -85,32 +90,34 @@ export default function RegisterEmployee() {
       </div>
 
       {/* Form Card Container */}
-      <div className="bg-white dark:bg-neutral-900 rounded-3xl border border-stone-200 dark:border-neutral-800 shadow-sm p-8 transition-colors duration-200">
-        <form onSubmit={handleSubmit} className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div className="bg-white dark:bg-neutral-900 rounded-3xl border border-stone-200 dark:border-neutral-800 shadow-sm p-6 transition-colors duration-200">
+        <form onSubmit={handleSubmit} className="space-y-5">
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-x-6 gap-y-4">
             {/* Full Name */}
             <div>
-              <label className="block text-xs font-bold text-stone-700 dark:text-neutral-300 mb-1.5">Full Name</label>
-              <input 
+              <label htmlFor="employee-name" className={labelClass}>Full Name</label>
+              <input
+                id="employee-name"
                 type="text"
                 name="fullName"
                 placeholder="e.g. Julia Dizon"
                 value={formData.fullName}
                 onChange={handleChange}
                 required
-                className="w-full px-4 py-3 bg-white dark:bg-neutral-800 border border-stone-200 dark:border-neutral-700 rounded-xl text-stone-800 dark:text-white placeholder-stone-400 dark:placeholder-neutral-500 text-sm focus:outline-none focus:ring-2 focus:ring-[#0A5C36]"
+                className={inputClass}
               />
             </div>
 
             {/* Role Selection */}
             <div>
-              <label className="block text-xs font-bold text-stone-700 dark:text-neutral-300 mb-1.5">Role Selection</label>
+              <label htmlFor="employee-role" className={labelClass}>Role Selection</label>
               <select
+                id="employee-role"
                 name="role"
                 value={formData.role}
                 onChange={handleChange}
                 required
-                className="w-full px-4 py-3 bg-white dark:bg-neutral-800 border border-stone-200 dark:border-neutral-700 rounded-xl text-stone-800 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-[#0A5C36]"
+                className={inputClass}
               >
                 <option value="" disabled className="bg-white dark:bg-neutral-900">Select a role...</option>
                 <option value="Front-Desk" className="bg-white dark:bg-neutral-900">Front-Desk</option>
@@ -121,15 +128,16 @@ export default function RegisterEmployee() {
 
             {/* Email Address */}
             <div>
-              <label className="block text-xs font-bold text-stone-700 dark:text-neutral-300 mb-1.5">Email Address</label>
-              <input 
+              <label htmlFor="employee-email" className={labelClass}>Email Address</label>
+              <input
+                id="employee-email"
                 type="email"
                 name="email"
                 placeholder="miranda.kielljanrowynbscs2024@gmail.com"
                 value={formData.email}
                 onChange={handleChange}
                 required
-                className="w-full px-4 py-3 bg-white dark:bg-neutral-800 border border-stone-200 dark:border-neutral-700 rounded-xl text-stone-800 dark:text-white placeholder-stone-400 dark:placeholder-neutral-500 text-sm focus:outline-none focus:ring-2 focus:ring-[#0A5C36]"
+                className={inputClass}
                 aria-invalid={emailError ? 'true' : undefined}
                 aria-describedby={emailError ? 'employee-email-error' : undefined}
               />
@@ -138,15 +146,16 @@ export default function RegisterEmployee() {
 
             {/* Phone Number */}
             <div>
-              <label className="block text-xs font-bold text-stone-700 dark:text-neutral-300 mb-1.5">Phone Number</label>
-              <input 
+              <label htmlFor="employee-phone" className={labelClass}>Phone Number</label>
+              <input
+                id="employee-phone"
                 type="text"
                 name="phone"
                 placeholder="09XXXXXXXXX"
                 value={formData.phone}
                 onChange={handleChange}
                 required
-                className="w-full px-4 py-3 bg-white dark:bg-neutral-800 border border-stone-200 dark:border-neutral-700 rounded-xl text-stone-800 dark:text-white placeholder-stone-400 dark:placeholder-neutral-500 text-sm focus:outline-none focus:ring-2 focus:ring-[#0A5C36]"
+                className={inputClass}
                 inputMode="numeric"
                 maxLength={11}
                 aria-invalid={phoneError ? 'true' : undefined}
@@ -157,7 +166,7 @@ export default function RegisterEmployee() {
 
             {/* Password */}
             <div>
-              <label htmlFor="employee-password" className="block text-xs font-bold text-stone-700 dark:text-neutral-300 mb-1.5">Password</label>
+              <label htmlFor="employee-password" className={labelClass}>Password</label>
               <div className="relative">
                 <input
                   id="employee-password"
@@ -169,7 +178,7 @@ export default function RegisterEmployee() {
                   onChange={handleChange}
                   required
                   aria-describedby="password-checklist"
-                  className="w-full px-4 py-3 pr-11 bg-white dark:bg-neutral-800 border border-stone-200 dark:border-neutral-700 rounded-xl text-stone-800 dark:text-white placeholder-stone-400 dark:placeholder-neutral-500 text-sm focus:outline-none focus:ring-2 focus:ring-[#0A5C36] [&::-ms-reveal]:hidden [&::-ms-clear]:hidden"
+                  className={`${inputClass} pr-11 [&::-ms-reveal]:hidden [&::-ms-clear]:hidden`}
                 />
                 <button
                   type="button"
@@ -187,8 +196,8 @@ export default function RegisterEmployee() {
                 </button>
               </div>
 
-              {/* Live password checklist */}
-              <ul id="password-checklist" aria-label="Password requirements" className="mt-2 space-y-1">
+              {/* Live password checklist (two columns to save vertical space) */}
+              <ul id="password-checklist" aria-label="Password requirements" className="mt-2 grid grid-cols-1 sm:grid-cols-2 gap-x-3 gap-y-1">
                 {PASSWORD_RULES.map((rule) => {
                   const met = rule.test(formData.password);
                   return (
@@ -214,17 +223,15 @@ export default function RegisterEmployee() {
             </div>
 
             {/* Account Status Toggle */}
-            <div className="flex flex-col justify-center">
-              <label className="block text-xs font-bold text-stone-700 dark:text-neutral-300 mb-2">Account Status</label>
+            <div>
+              <span className={labelClass}>Account Status</span>
               <div className="flex items-center justify-between p-3 bg-stone-50 dark:bg-neutral-800/60 border border-stone-200 dark:border-neutral-700 rounded-xl">
-                <div>
-                  <p className="text-xs text-stone-800 dark:text-white font-semibold">Account Status</p>
-                  <p className="text-[11px] text-stone-400 dark:text-neutral-400">Activate employee immediately</p>
-                </div>
+                <p className="text-[11px] text-stone-500 dark:text-neutral-400">Activate employee immediately</p>
                 <label className="relative inline-flex items-center cursor-pointer">
-                  <input 
-                    type="checkbox" 
+                  <input
+                    type="checkbox"
                     name="isActive"
+                    aria-label="Activate employee immediately"
                     checked={formData.isActive}
                     onChange={handleChange}
                     className="sr-only peer"
@@ -235,28 +242,28 @@ export default function RegisterEmployee() {
             </div>
           </div>
 
-          {!isFormValid && (
-            <p className="text-xs text-stone-500 dark:text-neutral-400 text-right">
-              All fields are required. Complete the form and password checklist to save.
+          {/* Footer: helper text on the left, actions on the right */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-4 border-t border-stone-100 dark:border-neutral-800">
+            <p className="text-xs text-stone-500 dark:text-neutral-400">
+              {isFormValid ? '' : 'All fields are required. Complete the form and password checklist to save.'}
             </p>
-          )}
 
-          {/* Action Buttons */}
-          <div className="flex items-center justify-end space-x-3 pt-6 border-t border-stone-100 dark:border-neutral-800">
-            <button 
-              type="button"
-              onClick={() => navigate('/admin/employees')}
-              className="px-6 py-2.5 border border-stone-200 dark:border-neutral-700 hover:bg-stone-50 dark:hover:bg-neutral-800 text-stone-700 dark:text-neutral-300 rounded-xl text-xs font-bold transition cursor-pointer"
-            >
-              Cancel
-            </button>
-            <button 
-              type="submit"
-              disabled={!isFormValid}
-              className="px-6 py-2.5 bg-[#0A5C36] hover:bg-[#074729] text-white rounded-xl text-xs font-bold shadow-md transition flex items-center space-x-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-[#0A5C36]"
-            >
-              <span>✓ Save Staff Member</span>
-            </button>
+            <div className="flex items-center justify-end space-x-3">
+              <button
+                type="button"
+                onClick={() => navigate('/admin/employees')}
+                className="px-6 py-2.5 border border-stone-200 dark:border-neutral-700 hover:bg-stone-50 dark:hover:bg-neutral-800 text-stone-700 dark:text-neutral-300 rounded-xl text-xs font-bold transition cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={!isFormValid}
+                className="px-8 py-2.5 bg-[#0A5C36] hover:bg-[#074729] text-white rounded-xl text-xs font-bold shadow-md transition cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-[#0A5C36]"
+              >
+                Save
+              </button>
+            </div>
           </div>
         </form>
       </div>

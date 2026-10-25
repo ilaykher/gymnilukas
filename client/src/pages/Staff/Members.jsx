@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom'; // ✨ [INUPDATE]: Idinagdag ang useNavigate para sa modal navigation
+import { Link, useNavigate } from 'react-router-dom';
 
 export default function Members() {
-  const navigate = useNavigate(); // ✨ [IDINAGDAG]: Hook para sa paglipat ng route papunta sa register modal
+  const navigate = useNavigate(); // Used to open the register-member page
 
   const [members, setMembers] = useState([
     { id: '#IP-8902', name: 'Jose Santos', contact: '09XX XXX 0001', status: 'Active', expiry: 'Oct 15, 2024' },
@@ -29,7 +29,6 @@ export default function Members() {
           <p className="text-stone-500 dark:text-neutral-400 text-sm mt-1">Search and manage all registered gym members.</p>
         </div>
         
-        {/* ✨ [INUPDATE]: Inilagay ang onClick para pumunta sa /register-member route at lumabas ang modal */}
         <button 
           onClick={() => navigate('/register-member')}
           className="bg-orange-600 hover:bg-orange-700 text-white font-semibold px-5 py-2.5 rounded-xl text-sm shadow-md transition flex items-center space-x-2 cursor-pointer"
@@ -126,7 +125,7 @@ export default function Members() {
               ) : (
                 <tr>
                   <td colSpan="5" className="py-8 text-center text-stone-400 dark:text-neutral-500">
-                    Walang nakitang miyembro na tumutugma sa iyong paghahanap.
+                    No members found matching your search.
                   </td>
                 </tr>
               )}

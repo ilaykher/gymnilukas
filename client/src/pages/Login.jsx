@@ -98,8 +98,8 @@ export default function Login() {
                 e.preventDefault();
                 setAlertState({
                   type: 'info',
-                  title: 'Password Reset',
-                  message: 'Password reset link sent.',
+                  title: 'Forgot Password',
+                  message: 'Please go to an administrator for assistance with resetting your password.',
                 });
               }}
               className="text-xs font-medium text-[#0A5C36] hover:underline"

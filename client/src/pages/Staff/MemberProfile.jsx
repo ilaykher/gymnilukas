@@ -1,58 +1,143 @@
 import React, { useState } from 'react';
+import AlertModal from '../../components/AlertModal';
+import FieldError from '../../components/FieldError';
+import { digitsOnly, sanitizeAmount, isValidPin, isValidReference } from '../../lib/validators';
+
+// Password-style input with an eye button to show / hide the value.
+function PinInput({ id, label, value, onChange, placeholder, error, errorId }) {
+  const [visible, setVisible] = useState(false);
+
+  return (
+    <div>
+      <label htmlFor={id} className="block text-xs font-semibold text-stone-600 dark:text-neutral-300 uppercase tracking-wider mb-1.5">{label}</label>
+      <div className="relative">
+        <input
+          id={id}
+          type={visible ? 'text' : 'password'}
+          placeholder={placeholder}
+          value={value}
+          onChange={(e) => onChange(digitsOnly(e.target.value, 4))}
+          inputMode="numeric"
+          maxLength={4}
+          autoComplete="off"
+          aria-invalid={error ? 'true' : undefined}
+          aria-describedby={error ? errorId : undefined}
+          className="w-full px-4 py-2.5 pr-11 bg-white dark:bg-neutral-800 border border-stone-300 dark:border-neutral-700 rounded-xl text-stone-800 dark:text-white placeholder-stone-400 dark:placeholder-neutral-500 text-sm focus:outline-none focus:ring-2 focus:ring-[#0A5C36] [&::-ms-reveal]:hidden [&::-ms-clear]:hidden"
+          required
+        />
+        <button
+          type="button"
+          onClick={() => setVisible((prev) => !prev)}
+          aria-label={visible ? 'Hide PIN' : 'Show PIN'}
+          aria-pressed={visible}
+          className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-stone-400 dark:text-neutral-500 hover:text-stone-600 dark:hover:text-neutral-300 cursor-pointer focus-visible:outline-none focus-visible:text-[#0A5C36]"
+        >
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+            {visible ? (
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
+            ) : (
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+            )}
+          </svg>
+        </button>
+      </div>
+      <FieldError id={errorId}>{error}</FieldError>
+    </div>
+  );
+}
 
 export default function MemberProfile() {
-  // State para sa Reset Password modal
+  // Reset PIN modal
   const [isResetModalOpen, setIsResetModalOpen] = useState(false);
-  const [newPassword, setNewPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
+  const [newPin, setNewPin] = useState('');
+  const [confirmPin, setConfirmPin] = useState('');
 
-  // State para sa Add Body Weight modal
+  // Add body weight modal
   const [isWeightModalOpen, setIsWeightModalOpen] = useState(false);
   const [bodyWeight, setBodyWeight] = useState('');
-  
-  // States para sa Renew Monthly Membership modal
-  const [isRenewModalOpen, setIsRenewModalOpen] = useState(false);
-  const [membershipType, setMembershipType] = useState('Student'); // 'Student' o 'Regular'
-  const [paymentMethod, setPaymentMethod] = useState('Cash'); // 'Cash' o 'GCash'
-  
-  // ✨ [BAGO/INUPDATE]: State para sa 13-digit reference number input sa GCash payment
-  const [gcashRef, setGcashRef] = useState('');
 
-  // Kunin ang kasalukuyang petsa para sa auto-generation ng weight
+  // Renew monthly membership modal
+  const [isRenewModalOpen, setIsRenewModalOpen] = useState(false);
+  const [membershipType, setMembershipType] = useState('Student'); // 'Student' or 'Regular'
+  const [paymentMethod, setPaymentMethod] = useState('Cash'); // 'Cash' or 'GCash'
+  const [gcashRef, setGcashRef] = useState(''); // exactly 13 digits for GCash
+
+  // Themed replacement for window.alert()
+  const [alertState, setAlertState] = useState(null);
+
+  // Current date, auto-generated for the weight entry
   const currentDate = new Date().toLocaleDateString('en-US', {
     year: 'numeric', month: 'long', day: 'numeric'
   });
 
-  const handleResetPasswordSubmit = (e) => {
-    e.preventDefault();
-    if (newPassword !== confirmPassword) {
-      alert('Hindi magkatugma ang mga password!');
-      return;
-    }
-    alert('Matagumpay na na-reset ang password ng miyembro!');
+  // ---- Validation ----
+  const isPinValid = isValidPin(newPin);
+  const isPinMatch = newPin === confirmPin;
+  const isResetFormValid = isPinValid && isValidPin(confirmPin) && isPinMatch;
+
+  const newPinError = newPin && !isPinValid ? `PIN must be exactly 4 digits (${newPin.length}/4).` : '';
+  const confirmPinError =
+    confirmPin && !isPinMatch && confirmPin.length === 4 ? 'PINs do not match.' : '';
+
+  const weightValue = parseFloat(bodyWeight);
+  const isWeightValid = bodyWeight !== '' && !Number.isNaN(weightValue) && weightValue > 0;
+
+  const isReferenceValid = paymentMethod === 'Cash' || isValidReference(gcashRef);
+  const refError =
+    gcashRef && !isValidReference(gcashRef)
+      ? `Reference number must be exactly 13 digits (${gcashRef.length}/13).`
+      : '';
+
+  // ---- Handlers ----
+  const closeResetModal = () => {
     setIsResetModalOpen(false);
-    setNewPassword('');
-    setConfirmPassword('');
+    setNewPin('');
+    setConfirmPin('');
   };
 
-  const handleAddWeightSubmit = (e) => {
+  const handleResetPinSubmit = (e) => {
     e.preventDefault();
-    alert(`Matagumpay na naidagdag ang bigat na ${bodyWeight} lbs!`);
+    if (!isResetFormValid) return;
+    closeResetModal();
+    setAlertState({
+      type: 'success',
+      title: 'PIN Reset',
+      message: "The member's PIN has been reset successfully.",
+    });
+  };
+
+  const closeWeightModal = () => {
     setIsWeightModalOpen(false);
     setBodyWeight('');
   };
 
-  // Handler para sa Renewal Submission
-  const handleRenewSubmit = (e) => {
+  const handleAddWeightSubmit = (e) => {
     e.preventDefault();
-    if (paymentMethod === 'GCash' && !gcashRef) {
-      alert('Mangyaring ilagay ang 13-digit GCash Reference Number.');
-      return;
-    }
-    const amount = membershipType === 'Student' ? '₱350.00' : '₱450.00';
-    alert(`Matagumpay na na-renew ang membership (${membershipType} Rate) via ${paymentMethod} amounting to ${amount}!`);
+    if (!isWeightValid) return;
+    const saved = bodyWeight;
+    closeWeightModal();
+    setAlertState({
+      type: 'success',
+      title: 'Weight Saved',
+      message: `Body weight of ${saved} lbs was added successfully.`,
+    });
+  };
+
+  const closeRenewModal = () => {
     setIsRenewModalOpen(false);
     setGcashRef('');
+  };
+
+  const handleRenewSubmit = (e) => {
+    e.preventDefault();
+    if (!isReferenceValid) return;
+    const amount = membershipType === 'Student' ? '₱350.00' : '₱450.00';
+    closeRenewModal();
+    setAlertState({
+      type: 'success',
+      title: 'Membership Renewed',
+      message: `Membership renewed (${membershipType} Rate) via ${paymentMethod}. Amount paid: ${amount}.`,
+    });
   };
 
   const isAnyModalOpen = isResetModalOpen || isWeightModalOpen || isRenewModalOpen;
@@ -62,7 +147,7 @@ export default function MemberProfile() {
 
   return (
     <div className="relative min-h-screen transition-colors duration-200">
-      {/* Blur effect sa buong page kapag mayroong alinmang modal na bukas */}
+      {/* Blur the whole page while any modal is open */}
       <div className={`space-y-6 transition duration-200 ${isAnyModalOpen ? 'filter blur-sm pointer-events-none select-none' : ''}`}>
         
         {/* Breadcrumb / Top Header */}
@@ -132,7 +217,7 @@ export default function MemberProfile() {
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
                 </svg>
-                <span>Reset Password</span>
+                <span>Reset PIN</span>
               </button>
             </div>
           </div>
@@ -223,52 +308,53 @@ export default function MemberProfile() {
         </div>
       </div>
 
-      {/* MODAL 1: RESET PASSWORD */}
+      {/* MODAL 1: RESET PIN (each field has its own eye toggle) */}
       {isResetModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-xs">
-          <div className="bg-white dark:bg-neutral-900 rounded-3xl border border-stone-200 dark:border-neutral-800 shadow-2xl max-w-md w-full p-6 md:p-8 space-y-6 relative animate-in fade-in zoom-in duration-200">
+          <div className="bg-white dark:bg-neutral-900 rounded-3xl border border-stone-200 dark:border-neutral-800 shadow-2xl max-w-md w-full max-h-[90vh] overflow-y-auto p-6 md:p-8 space-y-6 relative animate-in fade-in zoom-in duration-200">
             <div className="flex items-center justify-between">
               <div>
-                <h3 className="text-xl font-bold text-stone-900 dark:text-white">Reset Member Password</h3>
-                <p className="text-xs text-stone-500 dark:text-neutral-400 mt-1">Enter a new secure password for Marco Jimenez.</p>
+                <h3 className="text-xl font-bold text-stone-900 dark:text-white">Reset Member PIN</h3>
+                <p className="text-xs text-stone-500 dark:text-neutral-400 mt-1">Enter a new 4-digit PIN for Marco Jimenez.</p>
               </div>
               <button 
-                onClick={() => setIsResetModalOpen(false)}
+                onClick={closeResetModal}
+                aria-label="Close"
                 className="w-8 h-8 rounded-full bg-stone-100 dark:bg-neutral-800 text-stone-500 dark:text-neutral-400 hover:bg-stone-200 dark:hover:bg-neutral-700 flex items-center justify-center transition cursor-pointer"
               >
                 ✕
               </button>
             </div>
 
-            <form onSubmit={handleResetPasswordSubmit} className="space-y-4">
-              <div>
-                <label className="block text-xs font-semibold text-stone-600 dark:text-neutral-300 uppercase tracking-wider mb-1.5">New Password</label>
-                <input 
-                  type="password"
-                  placeholder="Enter new password"
-                  value={newPassword}
-                  onChange={(e) => setNewPassword(e.target.value)}
-                  className="w-full px-4 py-2.5 bg-white dark:bg-neutral-800 border border-stone-300 dark:border-neutral-700 rounded-xl text-stone-800 dark:text-white placeholder-stone-400 dark:placeholder-neutral-500 text-sm focus:outline-none focus:ring-2 focus:ring-[#0A5C36]"
-                  required
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-semibold text-stone-600 dark:text-neutral-300 uppercase tracking-wider mb-1.5">Confirm Password</label>
-                <input 
-                  type="password"
-                  placeholder="Confirm new password"
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  className="w-full px-4 py-2.5 bg-white dark:bg-neutral-800 border border-stone-300 dark:border-neutral-700 rounded-xl text-stone-800 dark:text-white placeholder-stone-400 dark:placeholder-neutral-500 text-sm focus:outline-none focus:ring-2 focus:ring-[#0A5C36]"
-                  required
-                />
-              </div>
+            <form onSubmit={handleResetPinSubmit} className="space-y-4">
+              <PinInput
+                id="new-pin"
+                label="New PIN"
+                placeholder="Enter new 4-digit PIN"
+                value={newPin}
+                onChange={setNewPin}
+                error={newPinError}
+                errorId="new-pin-error"
+              />
+              <PinInput
+                id="confirm-pin"
+                label="Confirm PIN"
+                placeholder="Confirm new PIN"
+                value={confirmPin}
+                onChange={setConfirmPin}
+                error={confirmPinError}
+                errorId="confirm-pin-error"
+              />
               <div className="flex items-center space-x-3 pt-2">
-                <button type="button" onClick={() => setIsResetModalOpen(false)} className="w-1/2 border border-stone-300 dark:border-neutral-700 hover:bg-stone-50 dark:hover:bg-neutral-800 text-stone-700 dark:text-neutral-300 font-semibold py-2.5 rounded-xl text-sm transition cursor-pointer">
+                <button type="button" onClick={closeResetModal} className="w-1/2 border border-stone-300 dark:border-neutral-700 hover:bg-stone-50 dark:hover:bg-neutral-800 text-stone-700 dark:text-neutral-300 font-semibold py-2.5 rounded-xl text-sm transition cursor-pointer">
                   Cancel
                 </button>
-                <button type="submit" className="w-1/2 bg-[#0A5C36] hover:bg-[#074729] text-white font-semibold py-2.5 rounded-xl text-sm shadow-md transition cursor-pointer">
-                  Save Password
+                <button
+                  type="submit"
+                  disabled={!isResetFormValid}
+                  className="w-1/2 bg-[#0A5C36] hover:bg-[#074729] text-white font-semibold py-2.5 rounded-xl text-sm shadow-md transition cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-[#0A5C36]"
+                >
+                  Save PIN
                 </button>
               </div>
             </form>
@@ -279,11 +365,12 @@ export default function MemberProfile() {
       {/* MODAL 2: ADD BODY WEIGHT */}
       {isWeightModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-xs">
-          <div className="bg-white dark:bg-neutral-900 rounded-3xl border border-stone-200 dark:border-neutral-800 shadow-2xl max-w-md w-full p-6 md:p-8 space-y-6 relative animate-in fade-in zoom-in duration-200">
+          <div className="bg-white dark:bg-neutral-900 rounded-3xl border border-stone-200 dark:border-neutral-800 shadow-2xl max-w-md w-full max-h-[90vh] overflow-y-auto p-6 md:p-8 space-y-6 relative animate-in fade-in zoom-in duration-200">
             <div className="flex items-center justify-between">
               <h3 className="text-xl font-bold text-stone-900 dark:text-white">Add Body Weight</h3>
               <button 
-                onClick={() => setIsWeightModalOpen(false)}
+                onClick={closeWeightModal}
+                aria-label="Close"
                 className="w-8 h-8 rounded-full bg-stone-100 dark:bg-neutral-800 text-stone-500 dark:text-neutral-400 hover:bg-stone-200 dark:hover:bg-neutral-700 flex items-center justify-center transition cursor-pointer"
               >
                 ✕
@@ -292,13 +379,14 @@ export default function MemberProfile() {
 
             <form onSubmit={handleAddWeightSubmit} className="space-y-5">
               <div>
-                <label htmlFor="bodyWeight" className="block text-sm font-medium text-stone-700 dark:text-neutral-300 mb-2">Body Weight</label>
+                <label htmlFor="bodyWeight" className="block text-sm font-medium text-stone-700 dark:text-neutral-300 mb-2">Body Weight (lbs)</label>
                 <input
                   id="bodyWeight"
                   type="text"
                   value={bodyWeight}
-                  onChange={(e) => setBodyWeight(e.target.value)}
-                  placeholder="e.g. 176 lbs"
+                  onChange={(e) => setBodyWeight(sanitizeAmount(e.target.value))}
+                  placeholder="e.g. 176"
+                  inputMode="decimal"
                   className="w-full px-4 py-3 bg-stone-50 dark:bg-neutral-800 border border-stone-200 dark:border-neutral-700 rounded-xl text-stone-800 dark:text-white placeholder:text-stone-400 dark:placeholder:text-neutral-500 focus:outline-none focus:ring-2 focus:ring-[#0A5C36]/50 focus:border-[#0A5C36] text-sm transition"
                   required
                 />
@@ -311,14 +399,15 @@ export default function MemberProfile() {
               <div className="flex items-center space-x-3 pt-3 border-t border-stone-100 dark:border-neutral-800">
                 <button
                   type="button"
-                  onClick={() => setIsWeightModalOpen(false)}
+                  onClick={closeWeightModal}
                   className="w-1/2 bg-stone-100 dark:bg-neutral-800 hover:bg-stone-200 dark:hover:bg-neutral-700 text-stone-800 dark:text-neutral-200 font-semibold py-3 rounded-xl text-sm transition cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="w-1/2 bg-[#0A5C36] hover:bg-[#074729] text-white font-semibold py-3 rounded-xl text-sm shadow-md transition cursor-pointer"
+                  disabled={!isWeightValid}
+                  className="w-1/2 bg-[#0A5C36] hover:bg-[#074729] text-white font-semibold py-3 rounded-xl text-sm shadow-md transition cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-[#0A5C36]"
                 >
                   Save Weight
                 </button>
@@ -337,7 +426,8 @@ export default function MemberProfile() {
             <div className="flex items-center justify-between border-b border-stone-100 dark:border-neutral-800 pb-4">
               <h3 className="text-xl font-bold text-[#0A5C36] dark:text-emerald-400">Renew Monthly Membership</h3>
               <button 
-                onClick={() => setIsRenewModalOpen(false)}
+                onClick={closeRenewModal}
+                aria-label="Close"
                 className="w-8 h-8 rounded-full bg-stone-100 dark:bg-neutral-800 text-stone-500 dark:text-neutral-400 hover:bg-stone-200 dark:hover:bg-neutral-700 flex items-center justify-center transition cursor-pointer"
               >
                 ✕
@@ -420,11 +510,11 @@ export default function MemberProfile() {
                 </div>
               </div>
 
-              {/* Payment Details */}
+              {/* Payment Method */}
               <div>
                 <div className="flex items-center justify-between mb-2">
                   <label className="text-[10px] font-bold text-stone-400 dark:text-neutral-400 uppercase tracking-wider">
-                    Payment Details
+                    Payment Method
                   </label>
                   <span className="text-xs font-bold text-orange-600 dark:text-orange-400">Amount Due: {currentPrice}</span>
                 </div>
@@ -455,7 +545,7 @@ export default function MemberProfile() {
                   </div>
                 </div>
 
-                {/* GCash QR Scanner & Reference Number Input Area */}
+                {/* GCash QR & Reference Number */}
                 {paymentMethod === 'GCash' && (
                   <div className="bg-stone-50 dark:bg-neutral-800/60 border border-stone-200 dark:border-neutral-700 p-4 rounded-2xl space-y-3 animate-in fade-in duration-200">
                     <div className="flex items-center justify-between text-xs">
@@ -469,19 +559,26 @@ export default function MemberProfile() {
                       </div>
                     </div>
 
-                    <div className="flex items-center space-x-4 pt-2 border-t border-stone-200 dark:border-neutral-700">
+                    <div className="flex items-start space-x-4 pt-2 border-t border-stone-200 dark:border-neutral-700">
                       <div className="w-20 h-20 bg-stone-200 dark:bg-neutral-700 rounded-xl flex items-center justify-center text-stone-500 dark:text-neutral-300 text-[10px] font-semibold shrink-0 border border-stone-300 dark:border-neutral-600">
                         [ QR CODE ]
                       </div>
                       <div className="flex-1 space-y-1">
-                        <label className="block text-[10px] font-bold text-stone-500 dark:text-neutral-400 uppercase">Input Reference Number</label>
+                        <label htmlFor="gcash-ref" className="block text-[10px] font-bold text-stone-500 dark:text-neutral-400 uppercase">Input Reference Number</label>
                         <input 
+                          id="gcash-ref"
                           type="text"
                           placeholder="Enter 13-digit Reference"
                           value={gcashRef}
-                          onChange={(e) => setGcashRef(e.target.value)}
+                          onChange={(e) => setGcashRef(digitsOnly(e.target.value, 13))}
+                          inputMode="numeric"
+                          maxLength={13}
+                          required
+                          aria-invalid={refError ? 'true' : undefined}
+                          aria-describedby={refError ? 'gcash-ref-error' : undefined}
                           className="w-full px-3 py-2 bg-white dark:bg-neutral-800 border border-stone-300 dark:border-neutral-700 rounded-xl text-xs text-stone-800 dark:text-white placeholder-stone-400 dark:placeholder-neutral-500 focus:outline-none focus:ring-2 focus:ring-[#0A5C36]"
                         />
+                        <FieldError id="gcash-ref-error">{refError}</FieldError>
                         <p className="text-[10px] text-stone-400 dark:text-neutral-500">Ref. number is required for verification</p>
                       </div>
                     </div>
@@ -493,16 +590,17 @@ export default function MemberProfile() {
               <div className="flex items-center space-x-3 pt-3 border-t border-stone-100 dark:border-neutral-800">
                 <button
                   type="button"
-                  onClick={() => setIsRenewModalOpen(false)}
+                  onClick={closeRenewModal}
                   className="w-1/2 border border-stone-300 dark:border-neutral-700 hover:bg-stone-50 dark:hover:bg-neutral-800 text-stone-700 dark:text-neutral-300 font-semibold py-3 rounded-xl text-sm transition cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="w-1/2 bg-[#0A5C36] hover:bg-[#074729] text-white font-semibold py-3 rounded-xl text-sm shadow-md transition cursor-pointer"
+                  disabled={!isReferenceValid}
+                  className="w-1/2 bg-[#0A5C36] hover:bg-[#074729] text-white font-semibold py-3 rounded-xl text-sm shadow-md transition cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-[#0A5C36]"
                 >
-                  Confirm & Pay ({currentPrice})
+                  Confirm & Pay
                 </button>
               </div>
 
@@ -511,6 +609,9 @@ export default function MemberProfile() {
           </div>
         </div>
       )}
+
+      {/* Themed alert (replaces window.alert) */}
+      <AlertModal alert={alertState} onClose={() => setAlertState(null)} />
     </div>
   );
 }

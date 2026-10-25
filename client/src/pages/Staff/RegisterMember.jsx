@@ -2,7 +2,16 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import AlertModal from '../../components/AlertModal';
 import FieldError from '../../components/FieldError';
-import { stripDigits, digitsOnly, isBlank, isValidPhone, getPhoneError, isValidPin, isValidReference } from '../../lib/validators';
+import {
+  stripDigits,
+  digitsOnly,
+  sanitizeAmount,
+  isBlank,
+  isValidPhone,
+  getPhoneError,
+  isValidPin,
+  isValidReference,
+} from '../../lib/validators';
 
 export default function RegisterMember() {
   const navigate = useNavigate();
@@ -28,6 +37,7 @@ export default function RegisterMember() {
     if (name === 'fullName') next = stripDigits(value); // no numbers in names
     if (name === 'contactNumber') next = digitsOnly(value, 11); // numbers only, 11 digits
     if (name === 'pin') next = digitsOnly(value, 4); // numbers only, 4 digits
+    if (name === 'weight') next = sanitizeAmount(value); // numbers only (one decimal point allowed)
     setFormData(prev => ({ ...prev, [name]: next }));
   };
 
@@ -172,6 +182,7 @@ export default function RegisterMember() {
                 placeholder="e.g. 75"
                 value={formData.weight}
                 onChange={handleInputChange}
+                inputMode="decimal"
                 className="w-full px-4 py-3 bg-white dark:bg-neutral-800 border border-stone-200 dark:border-neutral-700 rounded-xl text-stone-800 dark:text-white placeholder-stone-400 dark:placeholder-neutral-500 text-sm focus:outline-none focus:ring-2 focus:ring-[#0A5C36]"
               />
             </div>
@@ -208,12 +219,14 @@ export default function RegisterMember() {
 
       {showPaymentModal && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-xs flex items-center justify-center z-50 p-4">
-          <div className="bg-white dark:bg-neutral-900 rounded-3xl border border-stone-200 dark:border-neutral-800 shadow-2xl max-w-md w-full overflow-hidden p-6 relative animate-in fade-in zoom-in transition-colors duration-200">
+          {/* max-h + overflow-y-auto keeps Cancel / Complete visible by scrolling inside the card (same as the renewal flow) */}
+          <div className="bg-white dark:bg-neutral-900 rounded-3xl border border-stone-200 dark:border-neutral-800 shadow-2xl max-w-md w-full max-h-[90vh] overflow-y-auto p-6 relative animate-in fade-in zoom-in transition-colors duration-200">
             <div className="flex items-center justify-between pb-4 border-b border-stone-100 dark:border-neutral-800 mb-4">
               <h3 className="text-lg font-extrabold text-stone-900 dark:text-white">Complete Member Payment</h3>
               <button
                 type="button"
                 onClick={() => setShowPaymentModal(false)}
+                aria-label="Close"
                 className="text-stone-400 dark:text-neutral-500 hover:text-stone-600 dark:hover:text-neutral-300 transition cursor-pointer"
               >
                 ✕
@@ -331,7 +344,7 @@ export default function RegisterMember() {
               {paymentMethod === 'gcash' && (
                 <div className="bg-stone-50 dark:bg-neutral-800/60 p-3 rounded-2xl border border-stone-200 dark:border-neutral-700 space-y-2">
                   <div className="flex items-center space-x-3">
-                    <div className="w-16 h-16 bg-stone-200 dark:bg-neutral-700 rounded-xl flex items-center justify-center text-[10px] text-stone-500 dark:text-neutral-300 font-bold">
+                    <div className="w-16 h-16 bg-stone-200 dark:bg-neutral-700 rounded-xl flex items-center justify-center text-[10px] text-stone-500 dark:text-neutral-300 font-bold shrink-0">
                       QR CODE
                     </div>
                     <div className="text-[11px] text-stone-600 dark:text-neutral-300 space-y-0.5">

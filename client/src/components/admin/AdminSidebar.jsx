@@ -1,5 +1,6 @@
-import React from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import React, { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import logoImage from '../../assets/logo.jpg';
 
 const navItems = [
@@ -50,9 +51,77 @@ const Icon = ({ paths }) => (
   </svg>
 );
 
+// Confirmation dialog shown before logging out.
+// Rendered in a portal so it sits above the sticky header (the sidebar creates its own stacking context).
+function LogoutConfirmModal({ onCancel, onConfirm }) {
+  useEffect(() => {
+    const handleKey = (e) => {
+      if (e.key === 'Escape') onCancel();
+    };
+    document.addEventListener('keydown', handleKey);
+    return () => document.removeEventListener('keydown', handleKey);
+  }, [onCancel]);
+
+  return createPortal(
+    <div
+      className="fixed inset-0 bg-black/40 backdrop-blur-md flex items-center justify-center z-50 p-4"
+      onMouseDown={(e) => {
+        if (e.target === e.currentTarget) onCancel();
+      }}
+    >
+      <div
+        role="alertdialog"
+        aria-modal="true"
+        aria-labelledby="logout-title"
+        aria-describedby="logout-message"
+        className="bg-white dark:bg-neutral-900 rounded-3xl border border-stone-200 dark:border-neutral-800 shadow-2xl max-w-sm w-full p-8 text-center animate-in fade-in zoom-in duration-200 motion-reduce:animate-none"
+      >
+        <div className="w-14 h-14 rounded-full bg-red-100 dark:bg-red-950 text-red-600 dark:text-red-400 flex items-center justify-center mx-auto mb-4 shadow-sm">
+          <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d={logoutIcon} />
+          </svg>
+        </div>
+
+        <h3 id="logout-title" className="text-xl font-extrabold text-stone-900 dark:text-white">
+          Log out?
+        </h3>
+        <p id="logout-message" className="text-sm text-stone-500 dark:text-neutral-400 mt-2 mb-6">
+          Are you sure you want to log out? You will be returned to the login screen.
+        </p>
+
+        <div className="flex items-center space-x-3">
+          <button
+            type="button"
+            autoFocus
+            onClick={onCancel}
+            className="w-1/2 py-3 border border-stone-200 dark:border-neutral-700 hover:bg-stone-50 dark:hover:bg-neutral-800 text-stone-700 dark:text-neutral-300 rounded-xl text-sm font-bold transition cursor-pointer"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={onConfirm}
+            className="w-1/2 py-3 bg-red-600 hover:bg-red-700 text-white rounded-xl text-sm font-bold shadow-md transition cursor-pointer"
+          >
+            Yes, log out
+          </button>
+        </div>
+      </div>
+    </div>,
+    document.body
+  );
+}
+
 export default function AdminSidebar() {
   const location = useLocation();
+  const navigate = useNavigate();
+  const [isLogoutOpen, setIsLogoutOpen] = useState(false);
   const isActive = (path) => location.pathname === path;
+
+  const handleLogout = () => {
+    setIsLogoutOpen(false);
+    navigate('/login');
+  };
 
   return (
     // sticky + h-screen keeps the sidebar locked in place while the page content scrolls
@@ -93,11 +162,21 @@ export default function AdminSidebar() {
           <span>Settings</span>
         </Link>
 
-        <Link to="/login" className={`${linkBase} ${idleClass}`}>
+        {/* Opens a confirmation dialog instead of logging out immediately */}
+        <button
+          type="button"
+          onClick={() => setIsLogoutOpen(true)}
+          aria-haspopup="dialog"
+          className={`${linkBase} ${idleClass} w-full text-left cursor-pointer`}
+        >
           <Icon paths={logoutIcon} />
           <span>Logout</span>
-        </Link>
+        </button>
       </div>
+
+      {isLogoutOpen && (
+        <LogoutConfirmModal onCancel={() => setIsLogoutOpen(false)} onConfirm={handleLogout} />
+      )}
     </aside>
   );
 }

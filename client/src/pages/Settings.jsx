@@ -1,9 +1,23 @@
-
 import React, { useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useTheme } from '../context/ThemeContext';
 import AlertModal from '../components/AlertModal';
-import { sanitizeAmount } from '../lib/validators';
+
+// Price input rule: up to 4 digits before the decimal point and up to 2 after (max 9999.99).
+const sanitizePrice = (value) => {
+  const cleaned = value.replace(/[^\d.]/g, '');
+  const firstDot = cleaned.indexOf('.');
+  if (firstDot === -1) return cleaned.slice(0, 4);
+  const whole = cleaned.slice(0, firstDot).slice(0, 4);
+  const decimals = cleaned.slice(firstDot + 1).replace(/\./g, '').slice(0, 2);
+  return `${whole}.${decimals}`;
+};
+
+// Pads a finished entry to two decimals (e.g. "15" -> "15.00").
+const formatPrice = (value) => {
+  const number = parseFloat(value);
+  return Number.isNaN(number) ? value : number.toFixed(2);
+};
 
 export default function Settings() {
   const location = useLocation();
@@ -35,7 +49,18 @@ export default function Settings() {
 
     setPlans((previousPlans) =>
       previousPlans.map((plan) =>
-        plan.id === id ? { ...plan, rate: sanitizeAmount(newRate) } : plan
+        plan.id === id ? { ...plan, rate: sanitizePrice(newRate) } : plan
+      )
+    );
+  };
+
+  // Show the price with two decimals once the user leaves the field.
+  const handleRateBlur = (id) => {
+    if (!isAdmin) return;
+
+    setPlans((previousPlans) =>
+      previousPlans.map((plan) =>
+        plan.id === id ? { ...plan, rate: formatPrice(plan.rate) } : plan
       )
     );
   };
@@ -250,7 +275,10 @@ export default function Settings() {
                         type="text"
                         value={plan.rate}
                         onChange={(e) => handleRateChange(plan.id, e.target.value)}
+                        onBlur={() => handleRateBlur(plan.id)}
                         disabled={!isAdmin}
+                        placeholder="0.00"
+                        maxLength={7}
                         className={`w-28 px-3 py-1.5 border rounded-lg text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-[#0A5C36] ${
                           inputClass
                         } ${

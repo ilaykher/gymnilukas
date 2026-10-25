@@ -12,6 +12,26 @@ const BREAK_KEY = 'staffOnBreak';
 // Replace with a real check against the logged-in staff account's password.
 const STAFF_PASSWORD = 'staff123';
 
+// Copy + styling for the confirmation dialog (one entry per guarded action).
+const CONFIRM_COPY = {
+  break: {
+    title: 'Take a break?',
+    message: 'Only Check-in will stay available until you enter your password to end the break.',
+    confirmLabel: 'Yes, take a break',
+    badge: 'bg-amber-100 dark:bg-amber-950 text-amber-700 dark:text-amber-400',
+    button: 'bg-amber-600 hover:bg-amber-700',
+    icon: 'M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z',
+  },
+  logout: {
+    title: 'Log out?',
+    message: 'You will be returned to the login screen.',
+    confirmLabel: 'Yes, log out',
+    badge: 'bg-red-100 dark:bg-red-950 text-red-600 dark:text-red-400',
+    button: 'bg-red-600 hover:bg-red-700',
+    icon: 'M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1',
+  },
+};
+
 const readBreakFlag = () => {
   try {
     return localStorage.getItem(BREAK_KEY) === 'true';
@@ -26,6 +46,7 @@ export default function DashboardLayout() {
   const [isResumeOpen, setIsResumeOpen] = useState(false);
   const [resumePassword, setResumePassword] = useState('');
   const [resumeError, setResumeError] = useState('');
+  const [confirmAction, setConfirmAction] = useState(null); // 'break' | 'logout' | null
   const dropdownRef = useRef(null);
   const navigate = useNavigate();
   const location = useLocation();
@@ -57,6 +78,16 @@ export default function DashboardLayout() {
     return () => document.removeEventListener('keydown', handleKey);
   }, [isResumeOpen]);
 
+  // Escape closes the confirmation dialog
+  useEffect(() => {
+    if (!confirmAction) return undefined;
+    const handleKey = (e) => {
+      if (e.key === 'Escape') setConfirmAction(null);
+    };
+    document.addEventListener('keydown', handleKey);
+    return () => document.removeEventListener('keydown', handleKey);
+  }, [confirmAction]);
+
   const saveBreakFlag = (value) => {
     setIsOnBreak(value);
     try {
@@ -66,9 +97,23 @@ export default function DashboardLayout() {
     }
   };
 
-  const startBreak = () => {
+  // Ask first, then act (see handleConfirm).
+  const requestBreak = () => {
     setDropdownOpen(false);
-    saveBreakFlag(true);
+    setConfirmAction('break');
+  };
+
+  const requestLogout = () => {
+    if (isOnBreak) return;
+    setDropdownOpen(false);
+    setConfirmAction('logout');
+  };
+
+  const handleConfirm = () => {
+    const action = confirmAction;
+    setConfirmAction(null);
+    if (action === 'break') saveBreakFlag(true);
+    if (action === 'logout') navigate('/login');
   };
 
   const openResume = () => {
@@ -91,12 +136,6 @@ export default function DashboardLayout() {
     }
   };
 
-  const handleLogout = () => {
-    if (isOnBreak) return;
-    setDropdownOpen(false);
-    navigate('/login');
-  };
-
   const getHeaderTitle = () => {
     if (location.pathname === '/members') return 'Member Directory';
     if (location.pathname === '/member-profile') return 'Member Profile';
@@ -109,6 +148,7 @@ export default function DashboardLayout() {
   };
 
   const isFullWidth = FULL_WIDTH_PATHS.includes(location.pathname);
+  const confirmCopy = confirmAction ? CONFIRM_COPY[confirmAction] : null;
 
   return (
     <div className="min-h-screen bg-[#f4f5f0] dark:bg-neutral-950 flex font-sans transition-colors duration-200">
@@ -155,7 +195,7 @@ export default function DashboardLayout() {
                 <div className="p-2 bg-white dark:bg-neutral-900 space-y-1">
                   {/* Take a break / End break */}
                   <button
-                    onClick={isOnBreak ? openResume : startBreak}
+                    onClick={isOnBreak ? openResume : requestBreak}
                     className="w-full px-3 py-2.5 text-left font-bold text-amber-700 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-950/40 rounded-xl transition flex items-center space-x-2.5 cursor-pointer"
                   >
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
@@ -173,7 +213,7 @@ export default function DashboardLayout() {
 
                   {/* Divider & Logout Action */}
                   <button
-                    onClick={handleLogout}
+                    onClick={requestLogout}
                     disabled={isOnBreak}
                     title={isOnBreak ? 'Unavailable while on a break' : undefined}
                     className="w-full px-3 py-2.5 text-left font-bold text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/40 rounded-xl transition flex items-center space-x-2.5 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent"
@@ -194,6 +234,55 @@ export default function DashboardLayout() {
           <Outlet />
         </main>
       </div>
+
+      {/* Confirmation dialog for "Take a break" and "Log out" */}
+      {confirmCopy && (
+        <div
+          className="fixed inset-0 bg-black/40 backdrop-blur-md flex items-center justify-center z-50 p-4"
+          onMouseDown={(e) => {
+            if (e.target === e.currentTarget) setConfirmAction(null);
+          }}
+        >
+          <div
+            role="alertdialog"
+            aria-modal="true"
+            aria-labelledby="confirm-title"
+            aria-describedby="confirm-message"
+            className="bg-white dark:bg-neutral-900 rounded-3xl border border-stone-200 dark:border-neutral-800 shadow-2xl max-w-sm w-full p-8 text-center animate-in fade-in zoom-in duration-200 motion-reduce:animate-none"
+          >
+            <div className={`w-14 h-14 rounded-full flex items-center justify-center mx-auto mb-4 shadow-sm ${confirmCopy.badge}`}>
+              <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d={confirmCopy.icon} />
+              </svg>
+            </div>
+
+            <h3 id="confirm-title" className="text-xl font-extrabold text-stone-900 dark:text-white">
+              {confirmCopy.title}
+            </h3>
+            <p id="confirm-message" className="text-sm text-stone-500 dark:text-neutral-400 mt-2 mb-6">
+              {confirmCopy.message}
+            </p>
+
+            <div className="flex items-center space-x-3">
+              <button
+                type="button"
+                autoFocus
+                onClick={() => setConfirmAction(null)}
+                className="w-1/2 py-3 border border-stone-200 dark:border-neutral-700 hover:bg-stone-50 dark:hover:bg-neutral-800 text-stone-700 dark:text-neutral-300 rounded-xl text-sm font-bold transition cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirm}
+                className={`w-1/2 py-3 text-white rounded-xl text-sm font-bold shadow-md transition cursor-pointer ${confirmCopy.button}`}
+              >
+                {confirmCopy.confirmLabel}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Password dialog to end the break */}
       {isResumeOpen && (

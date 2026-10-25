@@ -1,55 +1,160 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import AlertModal from '../../components/AlertModal';
+import FieldError from '../../components/FieldError';
+import {
+  stripDigits,
+  isBlank,
+  isValidEmail,
+  isValidPassword,
+  PASSWORD_RULES,
+} from '../../lib/validators';
+
+const PAGE_SIZE = 6;
+
+// Mock data (kept in state below so edits update the table)
+const INITIAL_EMPLOYEES = [
+  { id: '#EMP-001', name: 'Sara Jimenez', role: 'Manager', email: 'sara.j@gymnilucas.com', status: 'Active' },
+  { id: '#EMP-042', name: 'Mark Valencia', role: 'Trainer', email: 'm.valencia@gymnilucas.com', status: 'Active' },
+  { id: '#EMP-088', name: 'Elena Reyes', role: 'Front Desk', email: 'elena.r@gymnilucas.com', status: 'Inactive' },
+  { id: '#EMP-102', name: 'Daniel Katigbak', role: 'Trainer', email: 'daniel.k@gymnilucas.com', status: 'Active' },
+  { id: '#EMP-110', name: 'Patricia Lopez', role: 'Front Desk', email: 'patricia.l@gymnilucas.com', status: 'Active' },
+  { id: '#EMP-115', name: 'Rico Mendoza', role: 'Trainer', email: 'rico.m@gymnilucas.com', status: 'Active' },
+  { id: '#EMP-121', name: 'Camille Santos', role: 'Front Desk', email: 'camille.s@gymnilucas.com', status: 'Inactive' },
+  { id: '#EMP-127', name: 'Jerome Bautista', role: 'Manager', email: 'jerome.b@gymnilucas.com', status: 'Active' },
+];
+
+// Lowercase and drop "#", "-" and spaces so "emp 042", "#EMP-042", "042" and "markvalencia" all match.
+const normalize = (value) => value.toLowerCase().replace(/[#\-\s]/g, '');
+
+const modalInputClass =
+  'w-full px-4 py-2.5 bg-white dark:bg-neutral-800 border border-stone-200 dark:border-neutral-700 rounded-xl text-stone-800 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-[#0A5C36]';
 
 export default function Employees() {
   const navigate = useNavigate();
 
-  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-  const [isResetModalOpen, setIsResetModalOpen] = useState(false);
+  const [employees, setEmployees] = useState(INITIAL_EMPLOYEES);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [page, setPage] = useState(1);
+  const [alertState, setAlertState] = useState(null);
 
-  const [selectedStaff, setSelectedStaff] = useState({
-    name: 'Sara Jimenez',
-    email: 'sara.j@gymnilucas.com',
-    role: 'Manager',
-    status: 'Active'
-  });
+  // Edit modal: editDraft holds a copy of the employee being edited (null = closed)
+  const [editDraft, setEditDraft] = useState(null);
 
+  // Reset-password modal: resetTarget is the employee (null = closed)
+  const [resetTarget, setResetTarget] = useState(null);
   const [showPassword, setShowPassword] = useState(false);
-  const [tempPassword, setTempPassword] = useState('TempPass123!');
+  const [newPassword, setNewPassword] = useState('');
   const [requireChange, setRequireChange] = useState(true);
 
-  const handleOpenEdit = (staff) => {
-    setSelectedStaff(staff);
-    setIsEditModalOpen(true);
+  // Filters instantly on every keystroke by Employee ID or Name.
+  const filteredEmployees = useMemo(() => {
+    const q = normalize(searchQuery);
+    return employees.filter(
+      (emp) => !q || normalize(emp.id).includes(q) || normalize(emp.name).includes(q)
+    );
+  }, [employees, searchQuery]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredEmployees.length / PAGE_SIZE));
+  const currentPage = Math.min(page, totalPages);
+  const start = (currentPage - 1) * PAGE_SIZE;
+  const pageRows = filteredEmployees.slice(start, start + PAGE_SIZE);
+
+  // ---- Edit staff ----
+  const emailError =
+    editDraft && editDraft.email && !isValidEmail(editDraft.email) ? 'Enter a valid email address.' : '';
+  const isEditValid = editDraft && !isBlank(editDraft.name) && isValidEmail(editDraft.email);
+
+  const handleSaveEdit = (e) => {
+    e.preventDefault();
+    if (!isEditValid) return;
+    const saved = { ...editDraft, name: editDraft.name.trim(), email: editDraft.email.trim() };
+    setEmployees((prev) => prev.map((emp) => (emp.id === saved.id ? saved : emp)));
+    setEditDraft(null);
+    setAlertState({
+      type: 'success',
+      title: 'Changes Saved',
+      message: `${saved.name}'s details were updated successfully.`,
+    });
+  };
+
+  // ---- Reset password ----
+  const openReset = () => {
+    setResetTarget({ id: editDraft.id, name: editDraft.name });
+    setEditDraft(null);
+    setNewPassword('');
+    setShowPassword(false);
+    setRequireChange(true);
+  };
+
+  const closeReset = () => {
+    setResetTarget(null);
+    setNewPassword('');
+  };
+
+  const isPasswordValid = isValidPassword(newPassword);
+
+  const handleResetPassword = (e) => {
+    e.preventDefault();
+    if (!isPasswordValid) return;
+    const name = resetTarget.name;
+    closeReset();
+    setAlertState({
+      type: 'success',
+      title: 'Password Updated',
+      message: requireChange
+        ? `${name}'s password was reset. They will be asked to change it on next login.`
+        : `${name}'s password was reset successfully.`,
+    });
   };
 
   return (
-    <div className="space-y-6 transition-colors duration-200">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+    <div className="w-full space-y-4 transition-colors duration-200">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
         <div>
           <h2 className="text-2xl font-bold text-stone-900 dark:text-white">Manage Employees</h2>
-          <p className="text-stone-500 dark:text-neutral-400 text-sm mt-1">View and manage staff accounts and roles.</p>
+          <p className="text-stone-500 dark:text-neutral-400 text-sm mt-0.5">View and manage staff accounts and roles.</p>
         </div>
 
-        <div className="flex items-center space-x-3">
-          <div className="relative">
+        <div className="flex flex-col sm:flex-row sm:items-center gap-3 md:flex-1 md:justify-end">
+          <div className="relative w-full md:max-w-sm">
             <span className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-stone-400 dark:text-neutral-500">
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
               </svg>
             </span>
             <input
               type="text"
-              placeholder="Search employees..."
-              className="pl-10 pr-4 py-2 bg-white dark:bg-neutral-900 border border-stone-200 dark:border-neutral-800 rounded-xl text-stone-800 dark:text-white placeholder-stone-400 dark:placeholder-neutral-500 text-xs focus:outline-none focus:ring-2 focus:ring-[#0A5C36] w-64 shadow-sm transition-colors duration-200"
+              placeholder="Search by Employee ID or Name"
+              aria-label="Search employees by ID or name"
+              value={searchQuery}
+              onChange={(e) => {
+                setSearchQuery(e.target.value);
+                setPage(1);
+              }}
+              className="w-full pl-10 pr-9 py-2 bg-white dark:bg-neutral-900 border border-stone-200 dark:border-neutral-800 rounded-xl text-stone-800 dark:text-white placeholder-stone-400 dark:placeholder-neutral-500 text-xs focus:outline-none focus:ring-2 focus:ring-[#0A5C36] shadow-sm transition-colors duration-200"
             />
+            {searchQuery && (
+              <button
+                type="button"
+                onClick={() => {
+                  setSearchQuery('');
+                  setPage(1);
+                }}
+                aria-label="Clear search"
+                className="absolute inset-y-0 right-0 pr-3 flex items-center text-stone-400 dark:text-neutral-500 hover:text-stone-600 dark:hover:text-neutral-300 cursor-pointer"
+              >
+                ✕
+              </button>
+            )}
           </div>
 
           <button
+            type="button"
             onClick={() => navigate('/admin/register-employee')}
-            className="bg-[#0A5C36] hover:bg-[#074729] text-white font-semibold px-4 py-2 rounded-xl text-xs shadow-md transition flex items-center space-x-2 cursor-pointer"
+            className="bg-[#0A5C36] hover:bg-[#074729] text-white font-semibold px-4 py-2 rounded-xl text-xs shadow-md transition flex items-center justify-center space-x-2 cursor-pointer shrink-0"
           >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
             </svg>
             <span>Add Staff</span>
@@ -62,28 +167,30 @@ export default function Employees() {
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="border-b border-stone-200 dark:border-neutral-800 text-stone-400 dark:text-neutral-400 text-xs font-semibold tracking-wider bg-stone-50/50 dark:bg-neutral-800/40">
-                <th className="py-3.5 px-6">ID</th>
-                <th className="py-3.5 px-6">NAME</th>
-                <th className="py-3.5 px-6">ROLE</th>
-                <th className="py-3.5 px-6">CONTACT</th>
-                <th className="py-3.5 px-6">STATUS</th>
-                <th className="py-3.5 px-6 text-right">ACTIONS</th>
+                <th className="py-3 px-6">ID</th>
+                <th className="py-3 px-6">NAME</th>
+                <th className="py-3 px-6">ROLE</th>
+                <th className="py-3 px-6">CONTACT</th>
+                <th className="py-3 px-6">STATUS</th>
+                <th className="py-3 px-6 text-right">ACTIONS</th>
               </tr>
             </thead>
 
             <tbody className="divide-y divide-stone-100 dark:divide-neutral-800 text-sm">
-              {[
-                { id: '#EMP-001', name: 'Sara Jimenez', role: 'Manager', email: 'sara.j@gymnilucas.com', status: 'Active' },
-                { id: '#EMP-042', name: 'Mark Valencia', role: 'Trainer', email: 'm.valencia@gymnilucas.com', status: 'Active' },
-                { id: '#EMP-088', name: 'Elena Reyes', role: 'Front Desk', email: 'elena.r@gymnilucas.com', status: 'Inactive' },
-                { id: '#EMP-102', name: 'Daniel Katigbak', role: 'Trainer', email: 'daniel.k@gymnilucas.com', status: 'Active' },
-              ].map((emp) => (
+              {pageRows.length === 0 && (
+                <tr>
+                  <td colSpan={6} className="py-10 text-center text-stone-500 dark:text-neutral-400">
+                    No employees match your search.
+                  </td>
+                </tr>
+              )}
+              {pageRows.map((emp) => (
                 <tr key={emp.id} className="hover:bg-stone-50/50 dark:hover:bg-neutral-800/50 transition">
-                  <td className="py-4 px-6 font-medium text-stone-600 dark:text-neutral-400">{emp.id}</td>
-                  <td className="py-4 px-6 font-semibold text-stone-900 dark:text-white">{emp.name}</td>
-                  <td className="py-4 px-6 text-stone-600 dark:text-neutral-400">{emp.role}</td>
-                  <td className="py-4 px-6 text-stone-600 dark:text-neutral-400">{emp.email}</td>
-                  <td className="py-4 px-6">
+                  <td className="py-3.5 px-6 font-medium text-stone-600 dark:text-neutral-400">{emp.id}</td>
+                  <td className="py-3.5 px-6 font-semibold text-stone-900 dark:text-white">{emp.name}</td>
+                  <td className="py-3.5 px-6 text-stone-600 dark:text-neutral-400">{emp.role}</td>
+                  <td className="py-3.5 px-6 text-stone-600 dark:text-neutral-400">{emp.email}</td>
+                  <td className="py-3.5 px-6">
                     <span className={`inline-flex px-3 py-1 rounded-full text-xs font-medium ${
                       emp.status === 'Active'
                         ? 'bg-emerald-100 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300'
@@ -92,12 +199,14 @@ export default function Employees() {
                       {emp.status}
                     </span>
                   </td>
-                  <td className="py-4 px-6 text-right">
+                  <td className="py-3.5 px-6 text-right">
                     <button
-                      onClick={() => handleOpenEdit(emp)}
+                      type="button"
+                      onClick={() => setEditDraft({ ...emp })}
+                      aria-label={`Edit ${emp.name}`}
                       className="text-stone-400 dark:text-neutral-500 hover:text-[#0A5C36] dark:hover:text-emerald-400 transition cursor-pointer"
                     >
-                      <svg className="w-4 h-4 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <svg className="w-4 h-4 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
                       </svg>
                     </button>
@@ -108,29 +217,52 @@ export default function Employees() {
           </table>
         </div>
 
-        <div className="p-4 border-t border-stone-200 dark:border-neutral-800 flex items-center justify-between text-xs text-stone-500 dark:text-neutral-400 bg-stone-50/50 dark:bg-neutral-800/40">
-          <span>Showing 1 to 4 of 24 entries</span>
+        {/* Pagination footer (same pattern as Transactions.jsx) */}
+        <div className="p-4 border-t border-stone-200 dark:border-neutral-800 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-stone-500 dark:text-neutral-400 bg-stone-50/50 dark:bg-neutral-800/40">
+          <span aria-live="polite">
+            Showing {filteredEmployees.length === 0 ? 0 : start + 1} to {start + pageRows.length} of {filteredEmployees.length} entries
+          </span>
           <div className="flex items-center space-x-2">
-            <button className="px-3 py-1.5 border border-stone-200 dark:border-neutral-700 rounded-lg bg-white dark:bg-neutral-900 text-stone-400 dark:text-neutral-600 cursor-not-allowed">
+            <button
+              type="button"
+              onClick={() => setPage(currentPage - 1)}
+              disabled={currentPage <= 1}
+              className="px-3 py-1.5 border border-stone-200 dark:border-neutral-700 rounded-lg bg-white dark:bg-neutral-900 text-stone-700 dark:text-neutral-300 hover:bg-stone-50 dark:hover:bg-neutral-800 cursor-pointer transition disabled:text-stone-400 dark:disabled:text-neutral-600 disabled:cursor-not-allowed disabled:hover:bg-white dark:disabled:hover:bg-neutral-900"
+            >
               Previous
             </button>
-            <button className="px-3 py-1.5 border border-stone-200 dark:border-neutral-700 rounded-lg bg-white dark:bg-neutral-900 text-stone-700 dark:text-neutral-300 hover:bg-stone-50 dark:hover:bg-neutral-800 cursor-pointer transition">
+            <span className="px-1 font-medium">Page {currentPage} of {totalPages}</span>
+            <button
+              type="button"
+              onClick={() => setPage(currentPage + 1)}
+              disabled={currentPage >= totalPages}
+              className="px-3 py-1.5 border border-stone-200 dark:border-neutral-700 rounded-lg bg-white dark:bg-neutral-900 text-stone-700 dark:text-neutral-300 hover:bg-stone-50 dark:hover:bg-neutral-800 cursor-pointer transition disabled:text-stone-400 dark:disabled:text-neutral-600 disabled:cursor-not-allowed disabled:hover:bg-white dark:disabled:hover:bg-neutral-900"
+            >
               Next
             </button>
           </div>
         </div>
       </div>
 
-      {isEditModalOpen && (
+      {/* EDIT STAFF MODAL */}
+      {editDraft && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-xs flex items-center justify-center z-50 p-4">
-          <div className="bg-white dark:bg-neutral-900 rounded-3xl border border-stone-200 dark:border-neutral-800 shadow-2xl max-w-lg w-full overflow-hidden animate-in fade-in zoom-in duration-200 transition-colors">
+          <form
+            onSubmit={handleSaveEdit}
+            className="bg-white dark:bg-neutral-900 rounded-3xl border border-stone-200 dark:border-neutral-800 shadow-2xl max-w-lg w-full max-h-[90vh] overflow-y-auto animate-in fade-in zoom-in duration-200 transition-colors"
+          >
             <div className="p-6 border-b border-stone-200 dark:border-neutral-800 flex items-center justify-between">
-              <h3 className="text-lg font-bold text-stone-900 dark:text-white">Edit Staff Member</h3>
+              <div>
+                <h3 className="text-lg font-bold text-stone-900 dark:text-white">Edit Staff Member</h3>
+                <p className="text-xs text-stone-400 dark:text-neutral-500 mt-0.5">{editDraft.id}</p>
+              </div>
               <button
-                onClick={() => setIsEditModalOpen(false)}
+                type="button"
+                onClick={() => setEditDraft(null)}
+                aria-label="Close"
                 className="text-stone-400 dark:text-neutral-500 hover:text-stone-600 dark:hover:text-neutral-300 transition cursor-pointer"
               >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
                 </svg>
               </button>
@@ -138,31 +270,39 @@ export default function Employees() {
 
             <div className="p-6 space-y-4">
               <div>
-                <label className="block text-xs font-semibold text-stone-700 dark:text-neutral-300 mb-1.5">Full Name</label>
+                <label htmlFor="edit-name" className="block text-xs font-semibold text-stone-700 dark:text-neutral-300 mb-1.5">Full Name</label>
                 <input
+                  id="edit-name"
                   type="text"
-                  value={selectedStaff.name}
-                  onChange={(e) => setSelectedStaff({ ...selectedStaff, name: e.target.value })}
-                  className="w-full px-4 py-2.5 bg-white dark:bg-neutral-800 border border-stone-200 dark:border-neutral-700 rounded-xl text-stone-800 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-[#0A5C36]"
+                  value={editDraft.name}
+                  onChange={(e) => setEditDraft({ ...editDraft, name: stripDigits(e.target.value) })}
+                  required
+                  className={modalInputClass}
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-stone-700 dark:text-neutral-300 mb-1.5">Email Contact</label>
+                <label htmlFor="edit-email" className="block text-xs font-semibold text-stone-700 dark:text-neutral-300 mb-1.5">Email Contact</label>
                 <input
+                  id="edit-email"
                   type="email"
-                  value={selectedStaff.email}
-                  onChange={(e) => setSelectedStaff({ ...selectedStaff, email: e.target.value })}
-                  className="w-full px-4 py-2.5 bg-white dark:bg-neutral-800 border border-stone-200 dark:border-neutral-700 rounded-xl text-stone-800 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-[#0A5C36]"
+                  value={editDraft.email}
+                  onChange={(e) => setEditDraft({ ...editDraft, email: e.target.value })}
+                  required
+                  aria-invalid={emailError ? 'true' : undefined}
+                  aria-describedby={emailError ? 'edit-email-error' : undefined}
+                  className={modalInputClass}
                 />
+                <FieldError id="edit-email-error">{emailError}</FieldError>
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-stone-700 dark:text-neutral-300 mb-1.5">Role</label>
+                <label htmlFor="edit-role" className="block text-xs font-semibold text-stone-700 dark:text-neutral-300 mb-1.5">Role</label>
                 <select
-                  value={selectedStaff.role}
-                  onChange={(e) => setSelectedStaff({ ...selectedStaff, role: e.target.value })}
-                  className="w-full px-4 py-2.5 bg-white dark:bg-neutral-800 border border-stone-200 dark:border-neutral-700 rounded-xl text-stone-800 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-[#0A5C36]"
+                  id="edit-role"
+                  value={editDraft.role}
+                  onChange={(e) => setEditDraft({ ...editDraft, role: e.target.value })}
+                  className={modalInputClass}
                 >
                   <option value="Manager" className="bg-white dark:bg-neutral-900">Manager</option>
                   <option value="Trainer" className="bg-white dark:bg-neutral-900">Trainer</option>
@@ -171,41 +311,30 @@ export default function Employees() {
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-stone-700 dark:text-neutral-300 mb-2">Account Status</label>
+                <span className="block text-xs font-semibold text-stone-700 dark:text-neutral-300 mb-2">Account Status</span>
                 <div className="flex items-center space-x-6">
-                  <label className="flex items-center space-x-2 cursor-pointer">
-                    <input
-                      type="radio"
-                      name="status"
-                      checked={selectedStaff.status === 'Active'}
-                      onChange={() => setSelectedStaff({ ...selectedStaff, status: 'Active' })}
-                      className="text-[#0A5C36] focus:ring-[#0A5C36]"
-                    />
-                    <span className="text-sm font-medium text-stone-800 dark:text-neutral-200">Active</span>
-                  </label>
-
-                  <label className="flex items-center space-x-2 cursor-pointer">
-                    <input
-                      type="radio"
-                      name="status"
-                      checked={selectedStaff.status === 'Inactive'}
-                      onChange={() => setSelectedStaff({ ...selectedStaff, status: 'Inactive' })}
-                      className="text-[#0A5C36] focus:ring-[#0A5C36]"
-                    />
-                    <span className="text-sm font-medium text-stone-800 dark:text-neutral-200">Inactive</span>
-                  </label>
+                  {['Active', 'Inactive'].map((status) => (
+                    <label key={status} className="flex items-center space-x-2 cursor-pointer">
+                      <input
+                        type="radio"
+                        name="status"
+                        checked={editDraft.status === status}
+                        onChange={() => setEditDraft({ ...editDraft, status })}
+                        className="accent-[#0A5C36]"
+                      />
+                      <span className="text-sm font-medium text-stone-800 dark:text-neutral-200">{status}</span>
+                    </label>
+                  ))}
                 </div>
               </div>
 
               <div className="pt-2">
                 <button
-                  onClick={() => {
-                    setIsEditModalOpen(false);
-                    setIsResetModalOpen(true);
-                  }}
+                  type="button"
+                  onClick={openReset}
                   className="text-xs font-semibold text-[#0A5C36] dark:text-emerald-400 hover:underline flex items-center space-x-1.5 cursor-pointer"
                 >
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                   </svg>
                   <span>Reset Password for Staff</span>
@@ -215,36 +344,44 @@ export default function Employees() {
 
             <div className="p-6 bg-stone-50 dark:bg-neutral-800/60 border-t border-stone-200 dark:border-neutral-800 flex items-center justify-end space-x-3">
               <button
-                onClick={() => setIsEditModalOpen(false)}
+                type="button"
+                onClick={() => setEditDraft(null)}
                 className="px-5 py-2.5 border border-stone-200 dark:border-neutral-700 rounded-xl text-stone-700 dark:text-neutral-300 text-sm font-semibold hover:bg-stone-100 dark:hover:bg-neutral-800 transition cursor-pointer"
               >
                 Cancel
               </button>
 
               <button
-                onClick={() => setIsEditModalOpen(false)}
-                className="px-5 py-2.5 bg-[#0A5C36] hover:bg-[#074729] text-white rounded-xl text-sm font-semibold shadow-md transition flex items-center space-x-2 cursor-pointer"
+                type="submit"
+                disabled={!isEditValid}
+                className="px-5 py-2.5 bg-[#0A5C36] hover:bg-[#074729] text-white rounded-xl text-sm font-semibold shadow-md transition cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-[#0A5C36]"
               >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
-                </svg>
-                <span>Save Changes</span>
+                Save Changes
               </button>
             </div>
-          </div>
+          </form>
         </div>
       )}
 
-      {isResetModalOpen && (
+      {/* RESET PASSWORD MODAL */}
+      {resetTarget && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-xs flex items-center justify-center z-50 p-4">
-          <div className="bg-white dark:bg-neutral-900 rounded-3xl border border-stone-200 dark:border-neutral-800 shadow-2xl max-w-md w-full overflow-hidden animate-in fade-in zoom-in duration-200 transition-colors">
+          <form
+            onSubmit={handleResetPassword}
+            className="bg-white dark:bg-neutral-900 rounded-3xl border border-stone-200 dark:border-neutral-800 shadow-2xl max-w-md w-full max-h-[90vh] overflow-y-auto animate-in fade-in zoom-in duration-200 transition-colors"
+          >
             <div className="p-6 border-b border-stone-200 dark:border-neutral-800 flex items-center justify-between">
-              <h3 className="text-lg font-bold text-stone-900 dark:text-white">Reset Password</h3>
+              <div>
+                <h3 className="text-lg font-bold text-stone-900 dark:text-white">Reset Password</h3>
+                <p className="text-xs text-stone-500 dark:text-neutral-400 mt-0.5">Set a new password for {resetTarget.name}.</p>
+              </div>
               <button
-                onClick={() => setIsResetModalOpen(false)}
+                type="button"
+                onClick={closeReset}
+                aria-label="Close"
                 className="text-stone-400 dark:text-neutral-500 hover:text-stone-600 dark:hover:text-neutral-300 transition cursor-pointer"
               >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
                 </svg>
               </button>
@@ -252,21 +389,27 @@ export default function Employees() {
 
             <div className="p-6 space-y-4">
               <div>
-                <label className="block text-xs font-semibold text-stone-700 dark:text-neutral-300 mb-1.5">New Password</label>
+                <label htmlFor="reset-password" className="block text-xs font-semibold text-stone-700 dark:text-neutral-300 mb-1.5">New Password</label>
                 <div className="relative">
                   <input
+                    id="reset-password"
                     type={showPassword ? 'text' : 'password'}
-                    value={tempPassword}
-                    onChange={(e) => setTempPassword(e.target.value)}
-                    className="w-full px-4 py-2.5 bg-white dark:bg-neutral-800 border border-stone-200 dark:border-neutral-700 rounded-xl text-stone-800 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-[#0A5C36] pr-10"
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    placeholder="Enter a new password"
+                    autoComplete="new-password"
+                    aria-describedby="reset-password-checklist"
+                    required
+                    className={`${modalInputClass} pr-10 [&::-ms-reveal]:hidden [&::-ms-clear]:hidden`}
                   />
 
                   <button
                     type="button"
-                    onClick={() => setShowPassword(!showPassword)}
+                    onClick={() => setShowPassword((prev) => !prev)}
+                    aria-label={showPassword ? 'Hide password' : 'Show password'}
                     className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-stone-400 dark:text-neutral-500 hover:text-stone-600 dark:hover:text-neutral-300 cursor-pointer"
                   >
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                       {showPassword ? (
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
                       ) : (
@@ -275,6 +418,31 @@ export default function Employees() {
                     </svg>
                   </button>
                 </div>
+
+                {/* Live password checklist (same rules as Register Employee) */}
+                <ul id="reset-password-checklist" aria-label="Password requirements" className="mt-2 grid grid-cols-1 sm:grid-cols-2 gap-x-3 gap-y-1">
+                  {PASSWORD_RULES.map((rule) => {
+                    const met = rule.test(newPassword);
+                    return (
+                      <li
+                        key={rule.id}
+                        className={`flex items-center gap-2 text-[11px] font-medium transition-colors ${
+                          met ? 'text-emerald-700 dark:text-emerald-400' : 'text-stone-500 dark:text-neutral-400'
+                        }`}
+                      >
+                        <svg className="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                          {met ? (
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M5 13l4 4L19 7" />
+                          ) : (
+                            <circle cx="12" cy="12" r="8" strokeWidth="2" />
+                          )}
+                        </svg>
+                        <span>{rule.label}</span>
+                        <span className="sr-only">{met ? '(met)' : '(not met)'}</span>
+                      </li>
+                    );
+                  })}
+                </ul>
               </div>
 
               <div className="flex items-center space-x-2.5 pt-1">
@@ -283,7 +451,7 @@ export default function Employees() {
                   id="requireChange"
                   checked={requireChange}
                   onChange={(e) => setRequireChange(e.target.checked)}
-                  className="w-4 h-4 text-[#0A5C36] focus:ring-[#0A5C36] rounded border-stone-300 dark:border-neutral-700 bg-white dark:bg-neutral-800 cursor-pointer"
+                  className="w-4 h-4 accent-[#0A5C36] rounded cursor-pointer"
                 />
                 <label htmlFor="requireChange" className="text-xs font-medium text-stone-700 dark:text-neutral-300 cursor-pointer select-none">
                   Require employee to change password on next login
@@ -293,25 +461,27 @@ export default function Employees() {
 
             <div className="p-6 bg-stone-50 dark:bg-neutral-800/60 border-t border-stone-200 dark:border-neutral-800 flex items-center justify-end space-x-3">
               <button
-                onClick={() => setIsResetModalOpen(false)}
+                type="button"
+                onClick={closeReset}
                 className="px-5 py-2.5 border border-stone-200 dark:border-neutral-700 rounded-xl text-stone-700 dark:text-neutral-300 text-sm font-semibold hover:bg-stone-100 dark:hover:bg-neutral-800 transition cursor-pointer"
               >
                 Cancel
               </button>
 
               <button
-                onClick={() => {
-                  alert('Password updated successfully!');
-                  setIsResetModalOpen(false);
-                }}
-                className="px-5 py-2.5 bg-[#0A5C36] hover:bg-[#074729] text-white rounded-xl text-sm font-semibold shadow-md transition cursor-pointer"
+                type="submit"
+                disabled={!isPasswordValid}
+                className="px-5 py-2.5 bg-[#0A5C36] hover:bg-[#074729] text-white rounded-xl text-sm font-semibold shadow-md transition cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-[#0A5C36]"
               >
                 Update Password
               </button>
             </div>
-          </div>
+          </form>
         </div>
       )}
+
+      {/* Themed alert (replaces window.alert) */}
+      <AlertModal alert={alertState} onClose={() => setAlertState(null)} />
     </div>
   );
 }
