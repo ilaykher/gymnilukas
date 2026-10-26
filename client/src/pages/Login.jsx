@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import AlertModal from '../components/AlertModal';
+import logo from '../assets/logo.jpg';
 
 // Swap this for a local image (e.g. import gymBg from '../assets/gym-bg.jpg') if you prefer.
 const GYM_BG =
@@ -34,15 +35,18 @@ export default function Login() {
       className="min-h-screen flex items-center justify-center p-4 font-sans bg-cover bg-center bg-no-repeat bg-[#0b1f17] relative"
       style={{ backgroundImage: `url(${GYM_BG})` }}
     >
-      {/* Dark overlay for contrast/readability */}
+      
       <div className="absolute inset-0 bg-linear-to-br from-black/70 via-black/50 to-[#0A5C36]/50" aria-hidden="true" />
 
       <div className="bg-white/95 backdrop-blur-sm rounded-3xl border border-white/30 shadow-2xl max-w-md w-full p-8 space-y-6 relative z-10">
         <div className="text-center space-y-3">
-          <div className="w-12 h-12 bg-[#0A5C36] rounded-full mx-auto flex items-center justify-center text-white shadow-md">
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3.75 13.5l10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75z" />
-            </svg>
+      
+          <div className="w-16 h-16 rounded-full mx-auto flex items-center justify-center overflow-hidden shadow-md">
+            <img 
+              src={logo} 
+              alt="Gym ni Lucas Logo" 
+              className="w-full h-full object-cover rounded-full" 
+            />
           </div>
           <div>
             <h2 className="text-2xl font-bold text-stone-900">Gym ni Lucas</h2>
@@ -64,8 +68,7 @@ export default function Login() {
           </div>
 
           <div className="relative">
-            {/* The [&::-ms-reveal]/[&::-ms-clear] classes hide the browser's built-in eye icon (Edge/IE),
-                which was stacking on top of the custom one and causing the "double eye". */}
+           
             <input
               type={showPassword ? 'text' : 'password'}
               placeholder="Password"
