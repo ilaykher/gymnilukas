@@ -1,23 +1,47 @@
-import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { getMembers } from '../../lib/api';
 
 export default function Members() {
-  const navigate = useNavigate(); // Used to open the register-member page
-
-  const [members, setMembers] = useState([
-    { id: '#IP-8902', name: 'Jose Santos', contact: '09XX XXX 0001', status: 'Active', expiry: 'Oct 15, 2024' },
-    { id: '#IP-8905', name: 'Maria Ramos', contact: '09XX XXX 0002', status: 'Expiring Soon', expiry: 'Nov 02, 2023' },
-    { id: '#IP-8850', name: 'Diego Torres', contact: '09XX XXX 0003', status: 'Expired', expiry: 'Sep 10, 2023' },
-    { id: '#IP-8912', name: 'Andrea Lim', contact: '09XX XXX 0004', status: 'Active', expiry: 'Jan 20, 2025' },
-  ]);
-
+  const navigate = useNavigate();
+  const [members, setMembers] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [retryCount, setRetryCount] = useState(0);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('All');
 
+  useEffect(() => {
+    const controller = new AbortController();
+
+    getMembers({ signal: controller.signal })
+      .then(setMembers)
+      .catch((requestError) => {
+        if (!controller.signal.aborted) {
+          setError(requestError.message || 'Unable to load members.');
+        }
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setLoading(false);
+      });
+
+    return () => controller.abort();
+  }, [retryCount]);
+
+  const handleRetry = () => {
+    setLoading(true);
+    setError('');
+    setRetryCount((count) => count + 1);
+  };
+
+  const statuses = [...new Set(members.map((member) => member.mem_status).filter(Boolean))];
   const filteredMembers = members.filter((member) => {
-    const matchesSearch = member.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                          member.id.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesStatus = statusFilter === 'All' || member.status === statusFilter;
+    const search = searchTerm.trim().toLowerCase();
+    const matchesSearch =
+      String(member.member_id).includes(search) ||
+      (member.mem_fullname || '').toLowerCase().includes(search) ||
+      (member.mem_contact_num || '').toLowerCase().includes(search);
+    const matchesStatus = statusFilter === 'All' || member.mem_status === statusFilter;
     return matchesSearch && matchesStatus;
   });
 
@@ -63,9 +87,9 @@ export default function Members() {
             className="w-full py-2.5 px-4 bg-white dark:bg-neutral-800 border border-stone-300 dark:border-neutral-700 rounded-xl text-sm text-stone-700 dark:text-neutral-200 focus:outline-none focus:ring-2 focus:ring-[#0A5C36]"
           >
             <option value="All" className="bg-white dark:bg-neutral-800">Status: All</option>
-            <option value="Active" className="bg-white dark:bg-neutral-800">Active</option>
-            <option value="Expiring Soon" className="bg-white dark:bg-neutral-800">Expiring Soon</option>
-            <option value="Expired" className="bg-white dark:bg-neutral-800">Expired</option>
+            {statuses.map((status) => (
+              <option key={status} value={status} className="bg-white dark:bg-neutral-800">{status}</option>
+            ))}
           </select>
         </div>
       </div>
@@ -79,52 +103,55 @@ export default function Members() {
                 <th className="py-3 px-6">NAME</th>
                 <th className="py-3 px-6">CONTACT</th>
                 <th className="py-3 px-6">STATUS</th>
-                <th className="py-3 px-6">EXPIRATION DATE</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-stone-100 dark:divide-neutral-800 text-sm">
-              {filteredMembers.length > 0 ? (
-                filteredMembers.map((member, index) => (
-                  <tr key={index} className="hover:bg-stone-50/50 dark:hover:bg-neutral-800/50 transition">
-                    <td className="py-4 px-6 font-medium text-stone-600 dark:text-neutral-400">{member.id}</td>
+              {loading ? (
+                <tr>
+                  <td colSpan="4" className="py-8 text-center text-stone-400 dark:text-neutral-500" role="status">
+                    Loading members...
+                  </td>
+                </tr>
+              ) : error ? (
+                <tr>
+                  <td colSpan="4" className="py-8 text-center text-red-600 dark:text-red-400">
+                    <p>Could not load members: {error}</p>
+                    <button
+                      type="button"
+                      onClick={handleRetry}
+                      className="mt-2 font-semibold underline"
+                    >
+                      Try again
+                    </button>
+                  </td>
+                </tr>
+              ) : filteredMembers.length > 0 ? (
+                filteredMembers.map((member) => (
+                  <tr key={member.member_id} className="hover:bg-stone-50/50 dark:hover:bg-neutral-800/50 transition">
+                    <td className="py-4 px-6 font-medium text-stone-600 dark:text-neutral-400">#{member.member_id}</td>
                     
                     <td className="py-4 px-6 flex items-center space-x-3">
                       <div className="w-8 h-8 rounded-full bg-stone-200 dark:bg-neutral-800 text-stone-700 dark:text-neutral-300 font-bold text-xs flex items-center justify-center">
-                        {member.name.split(' ').map(n => n[0]).join('')}
+                        {(member.mem_fullname || '?').split(' ').map((name) => name[0]).join('')}
                       </div>
-                      <Link 
-                        to="/member-profile" 
-                        className="font-semibold text-stone-900 dark:text-white hover:text-[#0A5C36] dark:hover:text-emerald-400 hover:underline transition"
-                      >
-                        {member.name}
-                      </Link>
+                      <span className="font-semibold text-stone-900 dark:text-white">{member.mem_fullname}</span>
                     </td>
 
-                    <td className="py-4 px-6 text-stone-600 dark:text-neutral-400">{member.contact}</td>
+                    <td className="py-4 px-6 text-stone-600 dark:text-neutral-400">{member.mem_contact_num || '—'}</td>
                     <td className="py-4 px-6">
-                      <span className={`inline-flex items-center space-x-1.5 px-3 py-1 rounded-full text-xs font-medium ${
-                        member.status === 'Active' 
-                          ? 'bg-emerald-100 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300' 
-                          : member.status === 'Expiring Soon'
-                          ? 'bg-amber-100 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300'
-                          : 'bg-red-100 dark:bg-red-950/60 text-red-700 dark:text-red-400'
+                      <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${
+                        String(member.mem_status).toLowerCase() === 'active'
+                          ? 'bg-emerald-100 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300'
+                          : 'bg-stone-100 dark:bg-neutral-800 text-stone-700 dark:text-neutral-300'
                       }`}>
-                        <span className={`w-1.5 h-1.5 rounded-full ${
-                          member.status === 'Active' 
-                            ? 'bg-emerald-600 dark:bg-emerald-400' 
-                            : member.status === 'Expiring Soon'
-                            ? 'bg-amber-600 dark:bg-amber-400'
-                            : 'bg-red-600 dark:bg-red-400'
-                        }`}></span>
-                        <span>{member.status}</span>
+                        {member.mem_status || 'Unknown'}
                       </span>
                     </td>
-                    <td className="py-4 px-6 text-stone-600 dark:text-neutral-400">{member.expiry}</td>
                   </tr>
                 ))
               ) : (
                 <tr>
-                  <td colSpan="5" className="py-8 text-center text-stone-400 dark:text-neutral-500">
+                  <td colSpan="4" className="py-8 text-center text-stone-400 dark:text-neutral-500">
                     No members found matching your search.
                   </td>
                 </tr>
@@ -134,15 +161,9 @@ export default function Members() {
         </div>
 
         <div className="p-4 border-t border-stone-200 dark:border-neutral-800 flex items-center justify-between text-stone-500 dark:text-neutral-400 text-sm bg-stone-50/30 dark:bg-neutral-800/30">
-          <span>Showing 1 to {filteredMembers.length} of 128 members</span>
-          <div className="flex items-center space-x-2">
-            <button className="w-8 h-8 rounded-lg border border-stone-300 dark:border-neutral-700 flex items-center justify-center hover:bg-white dark:hover:bg-neutral-800 transition text-stone-600 dark:text-neutral-300 disabled:opacity-50 cursor-pointer">
-              &lt;
-            </button>
-            <button className="w-8 h-8 rounded-lg border border-stone-300 dark:border-neutral-700 flex items-center justify-center hover:bg-white dark:hover:bg-neutral-800 transition text-stone-600 dark:text-neutral-300 cursor-pointer">
-              &gt;
-            </button>
-          </div>
+          <span>
+            {loading || error ? '—' : `Showing ${filteredMembers.length} of ${members.length} members`}
+          </span>
         </div>
       </div>
     </div>
