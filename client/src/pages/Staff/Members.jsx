@@ -134,7 +134,13 @@ export default function Members() {
                       <div className="w-8 h-8 rounded-full bg-stone-200 dark:bg-neutral-800 text-stone-700 dark:text-neutral-300 font-bold text-xs flex items-center justify-center">
                         {(member.mem_fullname || '?').split(' ').map((name) => name[0]).join('')}
                       </div>
-                      <span className="font-semibold text-stone-900 dark:text-white">{member.mem_fullname}</span>
+                      <button
+                        type="button"
+                        onClick={() => navigate(`/member-profile?id=${encodeURIComponent(member.member_id)}`)}
+                        className="font-semibold text-[#0A5C36] dark:text-emerald-400 hover:underline text-left"
+                      >
+                        {member.mem_fullname}
+                      </button>
                     </td>
 
                     <td className="py-4 px-6 text-stone-600 dark:text-neutral-400">{member.mem_contact_num || '—'}</td>

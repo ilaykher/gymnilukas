@@ -1,13 +1,9 @@
-import React from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import ActivityTable from './ActivityTable';
-import { activityRows } from './activityData';
-
-const stats = [
-  { label: "CUSTOMERS TODAY", value: '24', icon: '👥', badge: '+12%', tone: 'emerald' },
-  { label: "TODAY'S INCOME", value: '₱1,250', icon: '₱', badge: '+5%', tone: 'emerald' },
-  { label: 'MEMBERSHIPS EXPIRING TODAY', value: '5', icon: '⚠️', badge: null, tone: 'red' },
-];
+import { getDashboard } from '../../lib/api';
+import { toActivityRow } from '../../lib/activity';
+import { useManilaDayRefresh } from '../../lib/useManilaDayRefresh';
 
 const iconTone = {
   emerald: 'bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300',
@@ -16,6 +12,54 @@ const iconTone = {
 
 export default function StaffDashboard() {
   const navigate = useNavigate();
+  const [data, setData] = useState(null);
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(true);
+  const requestRef = useRef(null);
+
+  const loadDashboard = useCallback(() => {
+    requestRef.current?.abort();
+    const controller = new AbortController();
+    requestRef.current = controller;
+    getDashboard({ signal: controller.signal })
+      .then((dashboard) => {
+        setData(dashboard);
+        setError('');
+      })
+      .catch((requestError) => {
+        if (!controller.signal.aborted) {
+          setData(null);
+          setError(requestError.message);
+        }
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) {
+          setLoading(false);
+          if (requestRef.current === controller) requestRef.current = null;
+        }
+      });
+  }, []);
+
+  const refreshDashboard = useCallback(() => {
+    setData(null);
+    setLoading(true);
+    setError('');
+    loadDashboard();
+  }, [loadDashboard]);
+
+  useEffect(() => {
+    loadDashboard();
+    return () => requestRef.current?.abort();
+  }, [loadDashboard]);
+  useManilaDayRefresh(refreshDashboard);
+
+  const money = (value) => `₱${Number(value || 0).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  const stats = [
+    { label: 'CUSTOMERS TODAY', value: data ? Number(data.member_checkins_today) + Number(data.walk_ins_today) : '—', icon: '👥', tone: 'emerald' },
+    { label: "TODAY'S INCOME", value: data ? money(data.revenue_today) : '—', icon: '₱', tone: 'emerald' },
+    { label: 'MEMBERSHIPS EXPIRING TODAY', value: data?.memberships_expiring_today ?? '—', icon: '⚠️', tone: 'red' },
+  ];
+  const activityRows = data?.activity?.map(toActivityRow) || [];
 
   return (
     <div className="w-full flex-1 flex flex-col gap-6 relative transition-colors duration-200">
@@ -39,11 +83,6 @@ export default function StaffDashboard() {
               <div className={`w-11 h-11 rounded-xl flex items-center justify-center font-bold text-lg ${iconTone[s.tone]}`}>
                 {s.icon}
               </div>
-              {s.badge && (
-                <span className="text-xs font-semibold text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/60 px-2.5 py-1 rounded-full">
-                  {s.badge}
-                </span>
-              )}
             </div>
             <h3 className="text-4xl font-extrabold text-stone-900 dark:text-white mt-3">{s.value}</h3>
           </div>
@@ -65,7 +104,10 @@ export default function StaffDashboard() {
           </button>
         </div>
 
-        <ActivityTable rows={activityRows.slice(0, 5)} />
+        <ActivityTable
+          rows={activityRows.slice(0, 5)}
+          emptyMessage={loading ? 'Loading activity…' : error || 'No check-ins or walk-ins have been recorded today.'}
+        />
       </div>
     </div>
   );

@@ -1,7 +1,9 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import logoImage from '../../assets/logo.jpg';
+import { useAuth } from '../../context/useAuth';
+import { logout as logoutRequest } from '../../lib/api';
 
 const CHECK_IN_PATH = '/check-in';
 
@@ -106,7 +108,7 @@ function NavItem({ item, active, disabled, onClick }) {
 
 // Confirmation dialog shown before logging out.
 // Rendered in a portal so it sits above the sticky header (the sidebar creates its own stacking context).
-function LogoutConfirmModal({ onCancel, onConfirm }) {
+function LogoutConfirmModal({ onCancel, onConfirm, isLoggingOut, error }) {
   useEffect(() => {
     const handleKey = (e) => {
       if (e.key === 'Escape') onCancel();
@@ -141,12 +143,14 @@ function LogoutConfirmModal({ onCancel, onConfirm }) {
         <p id="logout-message" className="text-sm text-stone-500 dark:text-neutral-400 mt-2 mb-6">
           Are you sure you want to log out? You will be returned to the login screen.
         </p>
+        {error && <p role="alert" className="mb-4 text-sm text-red-600 dark:text-red-400">{error}</p>}
 
         <div className="flex items-center space-x-3">
           <button
             type="button"
             autoFocus
             onClick={onCancel}
+            disabled={isLoggingOut}
             className="w-1/2 py-3 border border-stone-200 dark:border-neutral-700 hover:bg-stone-50 dark:hover:bg-neutral-800 text-stone-700 dark:text-neutral-300 rounded-xl text-sm font-bold transition cursor-pointer"
           >
             Cancel
@@ -154,9 +158,10 @@ function LogoutConfirmModal({ onCancel, onConfirm }) {
           <button
             type="button"
             onClick={onConfirm}
-            className="w-1/2 py-3 bg-red-600 hover:bg-red-700 text-white rounded-xl text-sm font-bold shadow-md transition cursor-pointer"
+            disabled={isLoggingOut}
+            className="w-1/2 py-3 bg-red-600 hover:bg-red-700 disabled:opacity-60 disabled:cursor-wait text-white rounded-xl text-sm font-bold shadow-md transition cursor-pointer"
           >
-            Yes, log out
+            {isLoggingOut ? 'Recording...' : 'Yes, log out'}
           </button>
         </div>
       </div>
@@ -169,13 +174,26 @@ function LogoutConfirmModal({ onCancel, onConfirm }) {
 export default function Sidebar({ isOnBreak = false }) {
   const location = useLocation();
   const navigate = useNavigate();
+  const { signOut } = useAuth();
   const [isLogoutOpen, setIsLogoutOpen] = useState(false);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const [logoutError, setLogoutError] = useState('');
   const isActive = (path) => location.pathname === path;
   const isDisabled = (item) => isOnBreak && item.to !== CHECK_IN_PATH;
 
-  const handleLogout = () => {
-    setIsLogoutOpen(false);
-    navigate('/login');
+  const handleLogout = async () => {
+    if (isLoggingOut) return;
+    setIsLoggingOut(true);
+    setLogoutError('');
+    try {
+      await logoutRequest();
+      signOut();
+      setIsLogoutOpen(false);
+      navigate('/login', { replace: true });
+    } catch (error) {
+      setLogoutError(error.message || 'Unable to record shift end. Please try again.');
+      setIsLoggingOut(false);
+    }
   };
 
   return (
@@ -215,7 +233,12 @@ export default function Sidebar({ isOnBreak = false }) {
       </div>
 
       {isLogoutOpen && (
-        <LogoutConfirmModal onCancel={() => setIsLogoutOpen(false)} onConfirm={handleLogout} />
+        <LogoutConfirmModal
+          onCancel={() => setIsLogoutOpen(false)}
+          onConfirm={handleLogout}
+          isLoggingOut={isLoggingOut}
+          error={logoutError}
+        />
       )}
     </aside>
   );

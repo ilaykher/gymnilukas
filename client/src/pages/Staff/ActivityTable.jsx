@@ -1,20 +1,7 @@
-import React from 'react';
 
-const formatDate = (iso) =>
-  new Date(`${iso}T00:00:00`).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-
-const daysLeft = (iso) => {
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  return Math.round((new Date(`${iso}T00:00:00`) - today) / 86400000);
-};
-
-const expiryText = (row) => {
-  if (!row.expiresOn) return 'Walk-in: no membership to expire';
-  const d = daysLeft(row.expiresOn);
-  const when = d < 0 ? 'Expired' : d === 0 ? 'Expires today' : `Expires in ${d} day${d === 1 ? '' : 's'}`;
-  return `${when} (${formatDate(row.expiresOn)})`;
-};
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
+import { getActivityExpiryText } from '../../lib/activity';
 
 const badgeStyles = {
   Active: {
@@ -25,9 +12,89 @@ const badgeStyles = {
     pill: 'bg-yellow-100 dark:bg-yellow-950/60 text-yellow-800 dark:text-yellow-300',
     dot: 'bg-yellow-500 dark:bg-yellow-400',
   },
+  Expired: {
+    pill: 'bg-red-100 dark:bg-red-950/60 text-red-800 dark:text-red-300',
+    dot: 'bg-red-600 dark:bg-red-400',
+  },
 };
 
 export default function ActivityTable({ rows, emptyMessage = 'No activity found.' }) {
+  const [tooltip, setTooltip] = useState(null);
+  const [tooltipPosition, setTooltipPosition] = useState(null);
+  const tooltipRef = useRef(null);
+  const hideTimer = useRef(null);
+
+  const cancelHide = () => {
+    clearTimeout(hideTimer.current);
+  };
+
+  const hideTooltip = () => {
+    cancelHide();
+    hideTimer.current = setTimeout(() => setTooltip((current) => (
+      current?.pinned ? current : null
+    )), 150);
+  };
+
+  const showTooltip = (id, text, anchor) => {
+    cancelHide();
+    setTooltip((current) => ({
+      id,
+      text,
+      anchor,
+      pinned: current?.id === id && current.pinned,
+    }));
+  };
+
+  const toggleTooltip = (id, text, anchor) => {
+    cancelHide();
+    setTooltip((current) => (
+      current?.id === id && current.pinned
+        ? null
+        : { id, text, anchor, pinned: true }
+    ));
+  };
+
+  useLayoutEffect(() => {
+    if (!tooltip) return undefined;
+
+    const updatePosition = () => {
+      const anchorRect = tooltip.anchor.getBoundingClientRect();
+      const tooltipRect = tooltipRef.current?.getBoundingClientRect();
+      if (!tooltipRect) return;
+
+      const margin = 12;
+      const gap = 8;
+      const left = Math.min(
+        Math.max(anchorRect.left + (anchorRect.width - tooltipRect.width) / 2, margin),
+        window.innerWidth - tooltipRect.width - margin
+      );
+      const below = anchorRect.bottom + gap;
+      const top = below + tooltipRect.height <= window.innerHeight - margin
+        ? below
+        : Math.max(margin, anchorRect.top - tooltipRect.height - gap);
+      setTooltipPosition({ top, left });
+    };
+
+    updatePosition();
+    window.addEventListener('resize', updatePosition);
+    window.addEventListener('scroll', updatePosition, true);
+    return () => {
+      window.removeEventListener('resize', updatePosition);
+      window.removeEventListener('scroll', updatePosition, true);
+    };
+  }, [tooltip]);
+
+  useEffect(() => () => clearTimeout(hideTimer.current), []);
+
+  useEffect(() => {
+    if (!tooltip) return undefined;
+    const closeOnEscape = (event) => {
+      if (event.key === 'Escape') setTooltip(null);
+    };
+    window.addEventListener('keydown', closeOnEscape);
+    return () => window.removeEventListener('keydown', closeOnEscape);
+  }, [tooltip]);
+
   return (
     <div className="overflow-x-auto">
       <table className="w-full text-left border-collapse">
@@ -49,11 +116,13 @@ export default function ActivityTable({ rows, emptyMessage = 'No activity found.
           )}
           {rows.map((row, index) => {
             const style = badgeStyles[row.status] || badgeStyles.Active;
+            const disclosureId = `activity-expiry-${index}`;
+            const isDisclosed = tooltip?.id === disclosureId;
+            const expiryText = getActivityExpiryText(row);
             return (
               <tr
                 key={`${row.name}-${index}`}
-                tabIndex={0}
-                className="group hover:bg-stone-50 dark:hover:bg-neutral-800/50 focus:bg-stone-50 dark:focus:bg-neutral-800/50 focus:outline-none transition"
+                className="hover:bg-stone-50 dark:hover:bg-neutral-800/50 focus:bg-stone-50 dark:focus:bg-neutral-800/50 focus:outline-none"
               >
                 <td className="py-4 px-6">
                   <div className="flex items-center space-x-3">
@@ -76,26 +145,52 @@ export default function ActivityTable({ rows, emptyMessage = 'No activity found.
                   </span>
                 </td>
                 <td className="py-4 px-6 relative">
-                  <span
-                    className={`inline-flex items-center space-x-1.5 px-3 py-1 rounded-full text-xs font-medium ${style.pill}`}
-                  >
-                    <span className={`w-1.5 h-1.5 rounded-full ${style.dot}`}></span>
-                    <span>{row.status}</span>
-                  </span>
-
-                  {/* Expiry tooltip: shown on row hover or keyboard focus */}
-                  <span
-                    role="tooltip"
-                    className="pointer-events-none absolute right-full top-1/2 -translate-y-1/2 mr-2 z-10 whitespace-nowrap rounded-lg bg-stone-900 dark:bg-neutral-700 px-3 py-1.5 text-xs font-medium text-white shadow-lg opacity-0 transition-opacity duration-150 group-hover:opacity-100 group-focus:opacity-100"
-                  >
-                    {expiryText(row)}
-                  </span>
+                  <div className="relative inline-flex items-center gap-2">
+                    <span
+                      className={`inline-flex items-center space-x-1.5 px-3 py-1 rounded-full text-xs font-medium ${style.pill}`}
+                    >
+                      <span className={`w-1.5 h-1.5 rounded-full ${style.dot}`}></span>
+                      <span>{row.status}</span>
+                    </span>
+                    <button
+                      type="button"
+                      aria-label={`Show membership expiration for ${row.name}`}
+                      aria-expanded={isDisclosed}
+                      aria-describedby={isDisclosed ? disclosureId : undefined}
+                      onMouseEnter={(event) => showTooltip(disclosureId, expiryText, event.currentTarget)}
+                      onMouseLeave={hideTooltip}
+                      onFocus={(event) => showTooltip(disclosureId, expiryText, event.currentTarget)}
+                      onBlur={hideTooltip}
+                      onClick={(event) => toggleTooltip(disclosureId, expiryText, event.currentTarget)}
+                      className="rounded-full px-1.5 text-xs font-bold text-stone-500 hover:text-stone-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0A5C36] dark:text-neutral-300 dark:hover:text-white"
+                    >
+                      i
+                    </button>
+                  </div>
                 </td>
               </tr>
             );
           })}
         </tbody>
       </table>
+      {tooltip && createPortal(
+        <span
+          ref={tooltipRef}
+          id={tooltip.id}
+          role="tooltip"
+          onMouseEnter={cancelHide}
+          onMouseLeave={hideTooltip}
+          className="fixed z-[100] max-w-[min(16rem,calc(100vw-1.5rem))] rounded-lg bg-stone-900 dark:bg-neutral-700 px-3 py-2 text-xs font-medium text-white shadow-lg"
+          style={{
+            top: tooltipPosition?.top ?? 0,
+            left: tooltipPosition?.left ?? 0,
+            visibility: tooltipPosition ? 'visible' : 'hidden',
+          }}
+        >
+          {tooltip.text}
+        </span>,
+        document.body
+      )}
     </div>
   );
 }

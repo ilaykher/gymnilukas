@@ -1,12 +1,31 @@
-import React, { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import ActivityTable from './ActivityTable';
-import { activityRows } from './activityData';
+import { getActivity } from '../../lib/api';
+import { toActivityRow } from '../../lib/activity';
 
 export default function RealtimeActivity() {
   const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('All');
+  const [activityRows, setActivityRows] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    const controller = new AbortController();
+    getActivity({ signal: controller.signal, limit: 200 })
+      .then((rows) => setActivityRows(rows
+        .filter((row) => ['member.checked_in', 'walk_in.registered'].includes(row.activity_action))
+        .map(toActivityRow)))
+      .catch((requestError) => {
+        if (!controller.signal.aborted) setError(requestError.message);
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setLoading(false);
+      });
+    return () => controller.abort();
+  }, []);
 
   const filtered = useMemo(() => {
     const q = searchTerm.trim().toLowerCase();
@@ -15,16 +34,14 @@ export default function RealtimeActivity() {
       const matchesStatus = statusFilter === 'All' || r.status === statusFilter;
       return matchesSearch && matchesStatus;
     });
-  }, [searchTerm, statusFilter]);
+  }, [activityRows, searchTerm, statusFilter]);
 
   return (
     <div className="w-full flex-1 flex flex-col gap-6 transition-colors duration-200">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h2 className="text-2xl font-bold text-stone-900 dark:text-white">Real-time Activity</h2>
-          <p className="text-stone-500 dark:text-neutral-400 text-sm mt-1">
-            All check-ins and walk-ins for today. Hover a row to see when the subscription expires.
-          </p>
+          <p className="text-stone-500 dark:text-neutral-400 text-sm mt-1">Recorded check-ins and walk-ins. Hover a row to see membership expiry.</p>
         </div>
         <button
           onClick={() => navigate('/')}
@@ -71,10 +88,10 @@ export default function RealtimeActivity() {
       </div>
 
       <div className="flex-1 flex flex-col bg-white dark:bg-neutral-900 rounded-2xl border border-stone-200 dark:border-neutral-800 shadow-sm">
-        <ActivityTable rows={filtered} emptyMessage="No activity matches your search or filter." />
+        <ActivityTable rows={loading || error ? [] : filtered} emptyMessage={loading ? 'Loading activity…' : error || 'No activity matches your search or filter.'} />
 
         <p className="px-6 py-3 mt-auto text-xs text-stone-500 dark:text-neutral-400 border-t border-stone-100 dark:border-neutral-800" aria-live="polite">
-          Showing {filtered.length} of {activityRows.length} entries
+          {error ? 'Activity could not be loaded.' : `Showing ${filtered.length} of ${activityRows.length} entries`}
         </p>
       </div>
     </div>

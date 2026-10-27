@@ -1,6 +1,8 @@
-import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import AlertModal from '../../components/AlertModal';
 import FieldError from '../../components/FieldError';
+import { getCheckInExpiryText } from '../../lib/activity';
+import { checkInMember } from '../../lib/api';
 import { digitsOnly, isBlank, isValidPin } from '../../lib/validators';
 
 const inputClass =
@@ -12,11 +14,13 @@ const iconWrapClass =
 const AUTO_CLOSE_SECONDS = 5;
 
 export default function MemberCheckIn() {
-  const navigate = useNavigate();
   const [username, setUsername] = useState('');
   const [pin, setPin] = useState('');
   const [isSuccessModalOpen, setIsSuccessModalOpen] = useState(false);
   const [secondsLeft, setSecondsLeft] = useState(AUTO_CLOSE_SECONDS);
+  const [checkedInMember, setCheckedInMember] = useState(null);
+  const [alertState, setAlertState] = useState(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Both fields are required; the PIN must be exactly 4 digits.
   const isFormValid = !isBlank(username) && isValidPin(pin);
@@ -38,34 +42,33 @@ export default function MemberCheckIn() {
     return () => clearTimeout(timer);
   }, [isSuccessModalOpen, secondsLeft]);
 
-  const handleCheckIn = (e) => {
+  const handleCheckIn = async (e) => {
     e.preventDefault();
-    if (!isFormValid) return;
-    setSecondsLeft(AUTO_CLOSE_SECONDS);
-    setIsSuccessModalOpen(true);
+    if (!isFormValid || isSubmitting) return;
+    setIsSubmitting(true);
+    try {
+      const result = await checkInMember({ username, pin });
+      setCheckedInMember(result);
+      setSecondsLeft(AUTO_CLOSE_SECONDS);
+      setIsSuccessModalOpen(true);
+    } catch (error) {
+      setAlertState({ type: 'error', title: 'Check-In Failed', message: error.message });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const closeSuccess = () => {
     setIsSuccessModalOpen(false);
     setUsername('');
     setPin('');
+    setCheckedInMember(null);
   };
 
   return (
     // Centers a compact card in the content area instead of stretching it edge to edge.
     <div className="w-full flex-1 flex items-center justify-center py-2 transition-colors duration-200">
       <div className="w-full max-w-md bg-white dark:bg-neutral-900 rounded-3xl border border-stone-200 dark:border-neutral-800 shadow-xl p-8 space-y-6 relative transition-colors duration-200">
-        <button
-          type="button"
-          onClick={() => navigate('/')}
-          aria-label="Close and return to dashboard"
-          className="absolute top-5 right-5 p-1.5 rounded-full text-stone-400 dark:text-neutral-500 hover:text-stone-700 dark:hover:text-neutral-200 hover:bg-stone-100 dark:hover:bg-neutral-800 transition cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0A5C36]"
-        >
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
-          </svg>
-        </button>
-
         <div className="text-center">
           <h2 className="text-2xl font-extrabold text-[#0A5C36] dark:text-emerald-400">Member Check-In</h2>
           <p className="text-stone-500 dark:text-neutral-400 text-xs mt-1">
@@ -129,10 +132,10 @@ export default function MemberCheckIn() {
 
           <button
             type="submit"
-            disabled={!isFormValid}
+            disabled={!isFormValid || isSubmitting}
             className="w-full py-3.5 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-[#004D40] bg-[#004D40] hover:bg-[#00382E] text-white rounded-xl text-sm font-bold shadow-md transition flex items-center justify-center space-x-2 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[#0A5C36] dark:focus-visible:ring-offset-neutral-900"
           >
-            <span>Check-In</span>
+            <span>{isSubmitting ? 'Checking…' : 'Check-In'}</span>
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M14 5l7 7m0 0l-7 7m7-7H3" />
             </svg>
@@ -165,8 +168,8 @@ export default function MemberCheckIn() {
               <div className="w-16 h-16 bg-stone-200 dark:bg-neutral-800 rounded-2xl mx-auto mb-2 flex items-center justify-center text-stone-600 dark:text-neutral-300 font-bold text-lg shadow-inner">
                 MJ
               </div>
-              <h4 className="font-bold text-stone-900 dark:text-white text-base">Marco Jimenez</h4>
-              <p className="text-xs text-stone-400 dark:text-neutral-500">marcoj</p>
+              <h4 className="font-bold text-stone-900 dark:text-white text-base">{checkedInMember?.name}</h4>
+              <p className="text-xs text-stone-400 dark:text-neutral-500">{checkedInMember?.username}</p>
             </div>
 
             <div className="grid grid-cols-2 gap-4 text-left mb-6">
@@ -177,10 +180,14 @@ export default function MemberCheckIn() {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                   </svg>
                 </div>
-                <p className="font-bold text-stone-900 dark:text-white text-xs">Monthly Membership</p>
-                <p className="text-[10px] text-stone-500 dark:text-neutral-400 mt-0.5">Expires in 45 days (Oct 15, 2024)</p>
+                <p className="font-bold text-stone-900 dark:text-white text-xs">
+                  {checkedInMember?.membershipType === 'student' ? 'Student' : 'Regular'} Monthly Membership
+                </p>
+                <p className="text-[10px] text-stone-500 dark:text-neutral-400 mt-0.5">
+                  {getCheckInExpiryText(checkedInMember?.expiresOn)}
+                </p>
                 <span className="inline-block mt-2 px-2 py-0.5 bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 text-[10px] font-semibold rounded-full">
-                  ● Active
+                  ● {checkedInMember?.membershipStatus === 'expiring' ? 'Expiring soon' : 'Active'}
                 </span>
               </div>
 
@@ -191,8 +198,10 @@ export default function MemberCheckIn() {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 6l3 1m0 0l-3 9a5.002 5.002 0 006.001 0M6 7l3 9M6 7l6-2m6 2l3-1m-3 1l-3 9a5.002 5.002 0 006.001 0M18 7l3 9m-3-9l-6-2m0-2v2m0 16V5m0 16H9m3 0h3" />
                   </svg>
                 </div>
-                <p className="font-bold text-stone-900 dark:text-white text-xs mt-1">176 lbs / 79.8 kg</p>
-                <p className="text-[10px] text-stone-500 dark:text-neutral-400 mt-6">(Recorded: Oct 1, 2024)</p>
+                <p className="font-bold text-stone-900 dark:text-white text-xs mt-1">Check-in recorded</p>
+                <p className="text-[10px] text-stone-500 dark:text-neutral-400 mt-6">
+                  {checkedInMember?.atd_time_in ? new Date(checkedInMember.atd_time_in).toLocaleString() : ''}
+                </p>
               </div>
             </div>
 
@@ -209,6 +218,7 @@ export default function MemberCheckIn() {
           </div>
         </div>
       )}
+      <AlertModal alert={alertState} onClose={() => setAlertState(null)} />
     </div>
   );
 }

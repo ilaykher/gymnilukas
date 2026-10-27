@@ -1,7 +1,8 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import logoImage from '../../assets/logo.jpg';
+import { useAuth } from '../../context/useAuth';
 
 const navItems = [
   {
@@ -116,11 +117,13 @@ export default function AdminSidebar() {
   const location = useLocation();
   const navigate = useNavigate();
   const [isLogoutOpen, setIsLogoutOpen] = useState(false);
+  const { signOut } = useAuth();
   const isActive = (path) => location.pathname === path;
 
   const handleLogout = () => {
     setIsLogoutOpen(false);
-    navigate('/login');
+    signOut();
+    navigate('/login', { replace: true });
   };
 
   return (

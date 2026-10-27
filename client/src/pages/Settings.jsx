@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useTheme } from '../context/ThemeContext';
 import AlertModal from '../components/AlertModal';
+import { getPricing, updatePricing } from '../lib/api';
 
 // Price input rule: up to 4 digits before the decimal point and up to 2 after (max 9999.99).
 const sanitizePrice = (value) => {
@@ -24,25 +25,27 @@ export default function Settings() {
   const isAdmin = location.pathname.startsWith('/admin');
   const { isDarkMode, toggleDarkMode } = useTheme();
   const [alertState, setAlertState] = useState(null);
+  const [plans, setPlans] = useState([]);
+  const [pricesLoading, setPricesLoading] = useState(isAdmin);
+  const [saving, setSaving] = useState(false);
 
-  const [plans, setPlans] = useState([
-    {
-      id: 1,
-      name: 'Monthly Membership',
-      type: 'Recurring',
-      rate: '49.99',
-      unit: '/mo',
-      badgeStyle: 'bg-emerald-100 text-emerald-800'
-    },
-    {
-      id: 2,
-      name: 'Day Pass',
-      type: 'One-Time',
-      rate: '15.00',
-      unit: '/visit',
-      badgeStyle: 'bg-orange-100 text-orange-800'
-    }
-  ]);
+  useEffect(() => {
+    if (!isAdmin) return undefined;
+    const controller = new AbortController();
+    getPricing({ signal: controller.signal })
+      .then((prices) => setPlans([
+        { id: 'regularMonthly', name: 'Regular Monthly Membership', type: 'Recurring', rate: String(prices.regularMonthly), unit: '/mo', badgeStyle: 'bg-emerald-100 text-emerald-800' },
+        { id: 'studentMonthly', name: 'Student Monthly Membership', type: 'Recurring', rate: String(prices.studentMonthly), unit: '/mo', badgeStyle: 'bg-blue-100 text-blue-800' },
+        { id: 'dayPass', name: 'Day Pass', type: 'One-Time', rate: String(prices.dayPass), unit: '/visit', badgeStyle: 'bg-orange-100 text-orange-800' },
+      ]))
+      .catch((error) => {
+        if (!controller.signal.aborted) setAlertState({ type: 'error', title: 'Unable to load prices', message: error.message });
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setPricesLoading(false);
+      });
+    return () => controller.abort();
+  }, [isAdmin]);
 
   const handleRateChange = (id, newRate) => {
     if (!isAdmin) return;
@@ -65,13 +68,23 @@ export default function Settings() {
     );
   };
 
-  const handleSave = (planName) => {
-    if (!isAdmin) return;
-    setAlertState({
-      type: 'success',
-      title: 'Changes Saved',
-      message: `Successfully saved changes for ${planName}!`,
-    });
+  const handleSave = async (planName) => {
+    if (!isAdmin || saving) return;
+    const prices = Object.fromEntries(plans.map((plan) => [plan.id, Number(plan.rate)]));
+    if (Object.values(prices).some((price) => !Number.isInteger(price) || price <= 0)) {
+      setAlertState({ type: 'error', title: 'Invalid price', message: 'Enter whole-number PHP prices greater than zero.' });
+      return;
+    }
+    setSaving(true);
+    try {
+      const saved = await updatePricing(prices);
+      setPlans((previous) => previous.map((plan) => ({ ...plan, rate: String(saved[plan.id]) })));
+      setAlertState({ type: 'success', title: 'Changes Saved', message: `Successfully saved changes for ${planName}.` });
+    } catch (error) {
+      setAlertState({ type: 'error', title: 'Unable to save prices', message: error.message });
+    } finally {
+      setSaving(false);
+    }
   };
 
   const cardClass = isDarkMode
@@ -229,9 +242,7 @@ export default function Settings() {
               <h3 className={`font-bold text-base ${headingClass}`}>
                 Subscription Plans
               </h3>
-              <p className={`text-xs ${mutedClass}`}>
-                {plans.length} plans - {plans.length} active
-              </p>
+              <p className={`text-xs ${mutedClass}`}>{pricesLoading ? 'Loading plans…' : `${plans.length} plans`}</p>
             </div>
           </div>
         </div>
@@ -299,7 +310,7 @@ export default function Settings() {
                   <td className="py-4 px-6 text-right">
                     <button
                       type="button"
-                      disabled={!isAdmin || !(parseFloat(plan.rate) > 0)}
+                      disabled={!isAdmin || pricesLoading || saving || !(parseFloat(plan.rate) > 0)}
                       onClick={() => handleSave(plan.name)}
                       className={`px-4 py-1.5 border rounded-xl text-xs font-semibold transition ${
                         isAdmin
@@ -311,7 +322,7 @@ export default function Settings() {
                             : 'border-stone-200 text-stone-300 bg-stone-50 cursor-not-allowed'
                       }`}
                     >
-                      Save
+                      {saving ? 'Saving…' : 'Save'}
                     </button>
                   </td>
                 </tr>

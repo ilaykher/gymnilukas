@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import AlertModal from '../../components/AlertModal';
 import FieldError from '../../components/FieldError';
+import { createEmployee } from '../../lib/api';
 import {
   stripDigits,
   digitsOnly,
@@ -21,9 +22,11 @@ export default function RegisterEmployee() {
   const navigate = useNavigate();
   const [alertState, setAlertState] = useState(null);
   const [showPassword, setShowPassword] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [formData, setFormData] = useState({
     fullName: '',
     role: '',
+    username: '',
     email: '',
     phone: '',
     password: '',
@@ -45,6 +48,7 @@ export default function RegisterEmployee() {
   const isFormValid =
     !isBlank(formData.fullName) &&
     formData.role !== '' &&
+    /^[a-zA-Z0-9._-]{3,80}$/.test(formData.username.trim()) &&
     isValidEmail(formData.email) &&
     isValidPhone(formData.phone) &&
     isValidPassword(formData.password);
@@ -53,19 +57,37 @@ export default function RegisterEmployee() {
   const emailError =
     formData.email && !isValidEmail(formData.email) ? 'Enter a valid email address.' : '';
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!isFormValid) return;
-    setAlertState({
-      type: 'success',
-      title: 'Staff Registered',
-      message: `Staff member ${formData.fullName} successfully registered!`,
-    });
+    if (!isFormValid || isSubmitting) return;
+    setIsSubmitting(true);
+    try {
+      await createEmployee({
+        name: formData.fullName,
+        jobTitle: formData.role,
+        username: formData.username.trim(),
+        email: formData.email,
+        phone: formData.phone,
+        password: formData.password,
+        isActive: formData.isActive,
+      });
+      setAlertState({
+        type: 'success',
+        title: 'Staff Registered',
+        message: `Staff member ${formData.fullName} was registered. They can sign in with their username or email and password.`,
+        onClose: () => navigate('/admin/employees'),
+      });
+    } catch (error) {
+      setAlertState({ type: 'error', title: 'Staff Registration Failed', message: error.message });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const closeAlert = () => {
+    const afterClose = alertState?.onClose;
     setAlertState(null);
-    navigate('/admin/employees');
+    if (afterClose) afterClose();
   };
 
   return (
@@ -127,6 +149,24 @@ export default function RegisterEmployee() {
             </div>
 
             {/* Email Address */}
+            <div>
+              <label htmlFor="employee-username" className={labelClass}>Login Username</label>
+              <input
+                id="employee-username"
+                type="text"
+                name="username"
+                placeholder="e.g. julia.dizon"
+                value={formData.username}
+                onChange={handleChange}
+                required
+                minLength={3}
+                maxLength={80}
+                pattern="[a-zA-Z0-9._-]{3,80}"
+                title="Use 3–80 letters, numbers, periods, underscores, or hyphens."
+                className={inputClass}
+              />
+            </div>
+
             <div>
               <label htmlFor="employee-email" className={labelClass}>Email Address</label>
               <input
@@ -258,10 +298,10 @@ export default function RegisterEmployee() {
               </button>
               <button
                 type="submit"
-                disabled={!isFormValid}
+                disabled={!isFormValid || isSubmitting}
                 className="px-8 py-2.5 bg-[#0A5C36] hover:bg-[#074729] text-white rounded-xl text-xs font-bold shadow-md transition cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-[#0A5C36]"
               >
-                Save
+                {isSubmitting ? 'Saving…' : 'Save'}
               </button>
             </div>
           </div>

@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import AlertModal from '../components/AlertModal';
+import { useAuth } from '../context/useAuth';
 import logo from '../assets/logo.jpg';
 
 // Swap this for a local image (e.g. import gymBg from '../assets/gym-bg.jpg') if you prefer.
@@ -12,21 +13,34 @@ export default function Login() {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [alertState, setAlertState] = useState(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const navigate = useNavigate();
+  const location = useLocation();
+  const { signIn } = useAuth();
 
-  const handleLoginSubmit = (e) => {
+  const handleLoginSubmit = async (e) => {
     e.preventDefault();
-
-    if (username === 'admin' && password === 'admin123') {
-      navigate('/admin');
-    } else if (username === 'staff' && password === 'staff123') {
-      navigate('/dashboard');
-    } else {
+    if (isSubmitting) return;
+    setIsSubmitting(true);
+    try {
+      const user = await signIn({ username, password });
+      if (user.mustChangePassword) {
+        navigate('/change-password', { replace: true });
+        return;
+      }
+      const preferredPath = location.state?.from?.pathname;
+      const roleHome = user.role === 'admin' ? '/admin' : '/dashboard';
+      navigate(preferredPath && (user.role === 'admin' ? preferredPath.startsWith('/admin') : !preferredPath.startsWith('/admin'))
+        ? preferredPath
+        : roleHome, { replace: true });
+    } catch (error) {
       setAlertState({
         type: 'error',
         title: 'Login Failed',
-        message: 'Invalid username or password! (Use admin/admin123 or staff/staff123)',
+        message: error.message || 'Unable to sign in. Please check your connection and try again.',
       });
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -58,8 +72,8 @@ export default function Login() {
           <div>
             <input
               type="text"
-              placeholder="ID / Username"
-              aria-label="ID or username"
+              placeholder="Username or email"
+              aria-label="Username or email"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
               className="w-full px-4 py-3.5 bg-white border border-stone-200 rounded-2xl text-stone-800 text-sm focus:outline-none focus:ring-2 focus:ring-[#0A5C36]"
@@ -114,12 +128,13 @@ export default function Login() {
           <div className="pt-2">
             <button
               type="submit"
-              className="w-full bg-[#0A5C36] hover:bg-[#074729] text-white font-semibold py-3.5 rounded-2xl text-sm shadow-md transition flex items-center justify-center space-x-2 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[#0A5C36]"
+              disabled={isSubmitting}
+              className="w-full bg-[#0A5C36] hover:bg-[#074729] text-white font-semibold py-3.5 rounded-2xl text-sm shadow-md transition flex items-center justify-center space-x-2 cursor-pointer disabled:opacity-60 disabled:cursor-wait focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[#0A5C36]"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1" />
               </svg>
-              <span>Sign In</span>
+              <span>{isSubmitting ? 'Signing in…' : 'Sign In'}</span>
             </button>
           </div>
         </form>

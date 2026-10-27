@@ -1,16 +1,14 @@
-import React, { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import Sidebar from '../components/staff/Sidebar';
+import { useAuth } from '../context/useAuth';
+import { logout as logoutRequest, verifyCurrentPassword } from '../lib/api';
 
 // Pages that use the full width of the content area (no max-w cap)
 const FULL_WIDTH_PATHS = ['/dashboard', '/realtime-activity', '/check-in', '/register-member', '/walk-in-registration'];
 
 const CHECK_IN_PATH = '/check-in';
 const BREAK_KEY = 'staffOnBreak';
-
-// MOCK: matches the demo staff credentials in Login.jsx (staff / staff123).
-// Replace with a real check against the logged-in staff account's password.
-const STAFF_PASSWORD = 'staff123';
 
 // Copy + styling for the confirmation dialog (one entry per guarded action).
 const CONFIRM_COPY = {
@@ -47,9 +45,12 @@ export default function DashboardLayout() {
   const [resumePassword, setResumePassword] = useState('');
   const [resumeError, setResumeError] = useState('');
   const [confirmAction, setConfirmAction] = useState(null); // 'break' | 'logout' | null
+  const [logoutError, setLogoutError] = useState('');
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
   const dropdownRef = useRef(null);
   const navigate = useNavigate();
   const location = useLocation();
+  const { signOut } = useAuth();
 
   useEffect(() => {
     function handleClickOutside(event) {
@@ -106,14 +107,31 @@ export default function DashboardLayout() {
   const requestLogout = () => {
     if (isOnBreak) return;
     setDropdownOpen(false);
+    setLogoutError('');
     setConfirmAction('logout');
   };
 
-  const handleConfirm = () => {
+  const handleConfirm = async () => {
     const action = confirmAction;
-    setConfirmAction(null);
-    if (action === 'break') saveBreakFlag(true);
-    if (action === 'logout') navigate('/login');
+    if (action === 'break') {
+      setConfirmAction(null);
+      saveBreakFlag(true);
+    }
+    if (action === 'logout') {
+      setIsLoggingOut(true);
+      setLogoutError('');
+      try {
+        await logoutRequest();
+      } catch (error) {
+        setLogoutError(error.message || 'Unable to record shift end. Please try again.');
+        setIsLoggingOut(false);
+        return;
+      }
+      setConfirmAction(null);
+      signOut();
+      navigate('/login', { replace: true });
+    }
+    setIsLoggingOut(false);
   };
 
   const openResume = () => {
@@ -123,15 +141,16 @@ export default function DashboardLayout() {
     setIsResumeOpen(true);
   };
 
-  const handleResumeSubmit = (e) => {
+  const handleResumeSubmit = async (e) => {
     e.preventDefault();
-    if (resumePassword === STAFF_PASSWORD) {
+    try {
+      await verifyCurrentPassword(resumePassword);
       saveBreakFlag(false);
       setIsResumeOpen(false);
       setResumePassword('');
       setResumeError('');
-    } else {
-      setResumeError('Incorrect password. Please try again.');
+    } catch (error) {
+      setResumeError(error.message || 'Unable to verify your password. Please try again.');
       setResumePassword('');
     }
   };
@@ -262,11 +281,13 @@ export default function DashboardLayout() {
             <p id="confirm-message" className="text-sm text-stone-500 dark:text-neutral-400 mt-2 mb-6">
               {confirmCopy.message}
             </p>
+            {logoutError && <p role="alert" className="mb-4 text-sm text-red-600 dark:text-red-400">{logoutError}</p>}
 
             <div className="flex items-center space-x-3">
               <button
                 type="button"
-                autoFocus
+                autoFocus={!isLoggingOut}
+                disabled={isLoggingOut}
                 onClick={() => setConfirmAction(null)}
                 className="w-1/2 py-3 border border-stone-200 dark:border-neutral-700 hover:bg-stone-50 dark:hover:bg-neutral-800 text-stone-700 dark:text-neutral-300 rounded-xl text-sm font-bold transition cursor-pointer"
               >
@@ -274,10 +295,11 @@ export default function DashboardLayout() {
               </button>
               <button
                 type="button"
+                disabled={isLoggingOut}
                 onClick={handleConfirm}
-                className={`w-1/2 py-3 text-white rounded-xl text-sm font-bold shadow-md transition cursor-pointer ${confirmCopy.button}`}
+                className={`w-1/2 py-3 text-white rounded-xl text-sm font-bold shadow-md transition cursor-pointer disabled:opacity-60 disabled:cursor-wait ${confirmCopy.button}`}
               >
-                {confirmCopy.confirmLabel}
+                {isLoggingOut ? 'Recording…' : confirmCopy.confirmLabel}
               </button>
             </div>
           </div>

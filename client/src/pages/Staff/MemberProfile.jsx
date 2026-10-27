@@ -1,6 +1,8 @@
-import React, { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import AlertModal from '../../components/AlertModal';
 import FieldError from '../../components/FieldError';
+import { addMemberWeight, getMember, getPricing, renewMember, resetMemberPin } from '../../lib/api';
 import { digitsOnly, sanitizeAmount, isValidPin, isValidReference } from '../../lib/validators';
 
 // Password-style input with an eye button to show / hide the value.
@@ -47,6 +49,13 @@ function PinInput({ id, label, value, onChange, placeholder, error, errorId }) {
 }
 
 export default function MemberProfile() {
+  const [searchParams] = useSearchParams();
+  const memberId = searchParams.get('id');
+  const [member, setMember] = useState(null);
+  const [pageError, setPageError] = useState('');
+  const [prices, setPrices] = useState(null);
+  const [loadedMemberId, setLoadedMemberId] = useState(null);
+  const [isSaving, setIsSaving] = useState(false);
   // Reset PIN modal
   const [isResetModalOpen, setIsResetModalOpen] = useState(false);
   const [newPin, setNewPin] = useState('');
@@ -64,6 +73,27 @@ export default function MemberProfile() {
 
   // Themed replacement for window.alert()
   const [alertState, setAlertState] = useState(null);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    if (!memberId) {
+      return () => controller.abort();
+    }
+
+    Promise.all([getMember(memberId, { signal: controller.signal }), getPricing({ signal: controller.signal })])
+      .then(([profile, configuredPrices]) => {
+        setMember(profile);
+        setPrices(configuredPrices);
+        setPageError('');
+      })
+      .catch((error) => {
+        if (!controller.signal.aborted) setPageError(error.message);
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setLoadedMemberId(memberId);
+      });
+    return () => controller.abort();
+  }, [memberId]);
 
   // Current date, auto-generated for the weight entry
   const currentDate = new Date().toLocaleDateString('en-US', {
@@ -95,15 +125,19 @@ export default function MemberProfile() {
     setConfirmPin('');
   };
 
-  const handleResetPinSubmit = (e) => {
+  const handleResetPinSubmit = async (e) => {
     e.preventDefault();
-    if (!isResetFormValid) return;
-    closeResetModal();
-    setAlertState({
-      type: 'success',
-      title: 'PIN Reset',
-      message: "The member's PIN has been reset successfully.",
-    });
+    if (!isResetFormValid || isSaving) return;
+    setIsSaving(true);
+    try {
+      await resetMemberPin(memberId, newPin);
+      closeResetModal();
+      setAlertState({ type: 'success', title: 'PIN Reset', message: `${member.mem_fullname}'s PIN has been reset.` });
+    } catch (error) {
+      setAlertState({ type: 'error', title: 'PIN Reset Failed', message: error.message });
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const closeWeightModal = () => {
@@ -111,16 +145,21 @@ export default function MemberProfile() {
     setBodyWeight('');
   };
 
-  const handleAddWeightSubmit = (e) => {
+  const handleAddWeightSubmit = async (e) => {
     e.preventDefault();
-    if (!isWeightValid) return;
-    const saved = bodyWeight;
-    closeWeightModal();
-    setAlertState({
-      type: 'success',
-      title: 'Weight Saved',
-      message: `Body weight of ${saved} lbs was added successfully.`,
-    });
+    if (!isWeightValid || isSaving) return;
+    setIsSaving(true);
+    try {
+      const weightKg = Number((weightValue * 0.45359237).toFixed(2));
+      await addMemberWeight(memberId, weightKg);
+      setMember(await getMember(memberId));
+      closeWeightModal();
+      setAlertState({ type: 'success', title: 'Weight Saved', message: `Body weight of ${bodyWeight} lbs was recorded.` });
+    } catch (error) {
+      setAlertState({ type: 'error', title: 'Weight Save Failed', message: error.message });
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const closeRenewModal = () => {
@@ -128,22 +167,51 @@ export default function MemberProfile() {
     setGcashRef('');
   };
 
-  const handleRenewSubmit = (e) => {
+  const handleRenewSubmit = async (e) => {
     e.preventDefault();
-    if (!isReferenceValid) return;
-    const amount = membershipType === 'Student' ? '₱350.00' : '₱450.00';
-    closeRenewModal();
-    setAlertState({
-      type: 'success',
-      title: 'Membership Renewed',
-      message: `Membership renewed (${membershipType} Rate) via ${paymentMethod}. Amount paid: ${amount}.`,
-    });
+    if (!isReferenceValid || isSaving) return;
+    setIsSaving(true);
+    try {
+      const renewed = await renewMember(memberId, {
+        membershipType: membershipType.toLowerCase(),
+        paymentMethod: paymentMethod.toLowerCase(),
+        paymentReference: gcashRef,
+      });
+      setMember(await getMember(memberId));
+      closeRenewModal();
+      setAlertState({
+        type: 'success',
+        title: 'Membership Renewed',
+        message: `Membership renewed for ${renewed.member_name}. New expiry: ${new Date(`${renewed.mbs_expiration_date}T00:00:00`).toLocaleDateString()}.`,
+      });
+    } catch (error) {
+      setAlertState({ type: 'error', title: 'Renewal Failed', message: error.message });
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const isAnyModalOpen = isResetModalOpen || isWeightModalOpen || isRenewModalOpen;
 
   // Dynamic price computation
-  const currentPrice = membershipType === 'Student' ? '₱350.00' : '₱450.00';
+  const currentPrice = prices
+    ? `₱${Number(membershipType === 'Student' ? prices.studentMonthly : prices.regularMonthly).toFixed(2)}`
+    : 'Loading…';
+
+  if (!memberId) {
+    return <div className="py-12 text-center text-red-600" role="alert">Select a member from the directory to view their profile.</div>;
+  }
+  const isLoading = Boolean(memberId && loadedMemberId !== memberId);
+  if (isLoading) {
+    return <div className="py-12 text-center text-stone-500" role="status">Loading member profile…</div>;
+  }
+  if (pageError || !member) {
+    return <div className="py-12 text-center text-red-600" role="alert">{pageError || 'Member not found.'}</div>;
+  }
+
+  const latestWeight = member.weights?.[0];
+  const formatDate = (value) => value ? new Date(`${String(value).slice(0, 10)}T00:00:00`).toLocaleDateString() : '—';
+  const membershipStatus = String(member.membership_status || 'expired').toLowerCase();
 
   return (
     <div className="relative min-h-screen transition-colors duration-200">
@@ -171,15 +239,15 @@ export default function MemberProfile() {
             <div className="relative">
               <img 
                 src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80" 
-                alt="Marco Jimenez" 
+                alt={member.mem_fullname}
                 className="w-24 h-24 rounded-full object-cover border-4 border-stone-100 dark:border-neutral-800 shadow-sm"
               />
             </div>
 
             <div>
-              <h3 className="text-xl font-bold text-stone-900 dark:text-white">Marco Jimenez</h3>
+              <h3 className="text-xl font-bold text-stone-900 dark:text-white">{member.mem_fullname}</h3>
               <p className="text-xs text-stone-500 dark:text-neutral-400 mt-0.5 flex items-center justify-center space-x-1">
-                <span>Username: marcoj</span>
+                <span>Username: {member.mem_username || '—'}</span>
                 <svg className="w-3.5 h-3.5 cursor-pointer text-stone-400 dark:text-neutral-500 hover:text-stone-600 dark:hover:text-neutral-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
                 </svg>
@@ -191,7 +259,7 @@ export default function MemberProfile() {
               <span className="text-xs font-semibold text-stone-500 dark:text-neutral-400 uppercase">Status</span>
               <span className="inline-flex items-center space-x-1.5 px-3 py-1 rounded-full text-xs font-medium bg-emerald-100 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300">
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-600 dark:bg-emerald-400"></span>
-                <span>Active</span>
+                <span>{member.mem_status}</span>
               </span>
             </div>
 
@@ -199,11 +267,11 @@ export default function MemberProfile() {
             <div className="w-full text-left space-y-3 pt-2 border-t border-stone-100 dark:border-neutral-800 text-sm">
               <div>
                 <span className="text-xs font-bold text-stone-400 dark:text-neutral-500 uppercase tracking-wider block">Phone</span>
-                <p className="text-stone-800 dark:text-neutral-200 font-medium mt-0.5">09XX XXX 0005</p>
+                <p className="text-stone-800 dark:text-neutral-200 font-medium mt-0.5">{member.mem_contact_num || '—'}</p>
               </div>
               <div>
                 <span className="text-xs font-bold text-stone-400 dark:text-neutral-500 uppercase tracking-wider block">Address</span>
-                <p className="text-stone-800 dark:text-neutral-200 font-medium mt-0.5">North Cal</p>
+                <p className="text-stone-800 dark:text-neutral-200 font-medium mt-0.5">{member.mem_address || '—'}</p>
               </div>
             </div>
 
@@ -234,8 +302,14 @@ export default function MemberProfile() {
                   </svg>
                 </div>
                 <div>
-                  <h3 className="text-lg font-bold">Monthly Membership</h3>
-                  <p className="text-emerald-200 text-xs mt-0.5">Expires in 45 days (Oct 15, 2024)</p>
+                  <h3 className="text-lg font-bold">
+                    {member.membership_type ? `${member.membership_type} Monthly Membership` : 'No membership'}
+                  </h3>
+                  <p className="text-emerald-200 text-xs mt-0.5">
+                    {member.mbs_expiration_date
+                      ? `${membershipStatus === 'expired' ? 'Expired' : 'Expires'} ${formatDate(member.mbs_expiration_date)}`
+                      : 'No membership on record'}
+                  </p>
                 </div>
               </div>
               
@@ -261,16 +335,15 @@ export default function MemberProfile() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-stone-100 dark:divide-neutral-800 text-sm">
-                    {[
-                      { date: 'Oct 12, 2024', time: '08:30 AM' },
-                      { date: 'Oct 10, 2024', time: '06:15 PM' },
-                      { date: 'Oct 08, 2024', time: '07:00 AM' },
-                    ].map((row, index) => (
-                      <tr key={index} className="hover:bg-stone-50/50 dark:hover:bg-neutral-800/50 transition">
-                        <td className="py-4 px-6 text-stone-800 dark:text-neutral-200 font-medium">{row.date}</td>
-                        <td className="py-4 px-6 text-stone-600 dark:text-neutral-400 text-right">{row.time}</td>
+                    {(member.attendance || []).map((row) => (
+                      <tr key={row.attendance_id} className="hover:bg-stone-50/50 dark:hover:bg-neutral-800/50 transition">
+                        <td className="py-4 px-6 text-stone-800 dark:text-neutral-200 font-medium">{formatDate(row.atd_time_in)}</td>
+                        <td className="py-4 px-6 text-stone-600 dark:text-neutral-400 text-right">{new Date(row.atd_time_in).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</td>
                       </tr>
                     ))}
+                    {!member.attendance?.length && (
+                      <tr><td colSpan="2" className="py-6 text-center text-stone-500">No check-ins recorded.</td></tr>
+                    )}
                   </tbody>
                 </table>
               </div>
@@ -295,11 +368,15 @@ export default function MemberProfile() {
 
               <div className="pt-2 border-t border-stone-100 dark:border-neutral-800 flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-stone-700 dark:text-neutral-300">Weight</p>
+                  <p className="text-sm font-medium text-stone-700 dark:text-neutral-300">Weight (kg stored; enter lbs)</p>
                 </div>
                 <div className="text-right">
-                  <p className="text-base font-bold text-stone-900 dark:text-white">176 lbs</p>
-                  <p className="text-xs text-stone-400 dark:text-neutral-500">Oct 1, 2024</p>
+                  <p className="text-base font-bold text-stone-900 dark:text-white">
+                    {latestWeight ? `${(Number(latestWeight.weight_kg) * 2.20462).toFixed(1)} lbs` : 'No record'}
+                  </p>
+                  <p className="text-xs text-stone-400 dark:text-neutral-500">
+                    {latestWeight ? formatDate(latestWeight.weight_recorded_date) : 'Add a weight record'}
+                  </p>
                 </div>
               </div>
             </div>
@@ -315,7 +392,7 @@ export default function MemberProfile() {
             <div className="flex items-center justify-between">
               <div>
                 <h3 className="text-xl font-bold text-stone-900 dark:text-white">Reset Member PIN</h3>
-                <p className="text-xs text-stone-500 dark:text-neutral-400 mt-1">Enter a new 4-digit PIN for Marco Jimenez.</p>
+                <p className="text-xs text-stone-500 dark:text-neutral-400 mt-1">Enter a new 4-digit PIN for {member.mem_fullname}.</p>
               </div>
               <button 
                 onClick={closeResetModal}
@@ -351,10 +428,10 @@ export default function MemberProfile() {
                 </button>
                 <button
                   type="submit"
-                  disabled={!isResetFormValid}
+                  disabled={!isResetFormValid || isSaving}
                   className="w-1/2 bg-[#0A5C36] hover:bg-[#074729] text-white font-semibold py-2.5 rounded-xl text-sm shadow-md transition cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-[#0A5C36]"
                 >
-                  Save PIN
+                  {isSaving ? 'Saving…' : 'Save PIN'}
                 </button>
               </div>
             </form>
@@ -406,10 +483,10 @@ export default function MemberProfile() {
                 </button>
                 <button
                   type="submit"
-                  disabled={!isWeightValid}
+                  disabled={!isWeightValid || isSaving}
                   className="w-1/2 bg-[#0A5C36] hover:bg-[#074729] text-white font-semibold py-3 rounded-xl text-sm shadow-md transition cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-[#0A5C36]"
                 >
-                  Save Weight
+                  {isSaving ? 'Saving…' : 'Save Weight'}
                 </button>
               </div>
             </form>
@@ -441,7 +518,7 @@ export default function MemberProfile() {
                 <p className="text-stone-400 dark:text-neutral-400 font-bold uppercase tracking-wider text-[10px]">Renewal Summary</p>
                 <div className="flex justify-between text-stone-700 dark:text-neutral-300">
                   <span>Current Expiry:</span>
-                  <span className="font-semibold text-stone-900 dark:text-white">Oct 15, 2024</span>
+                  <span className="font-semibold text-stone-900 dark:text-white">{formatDate(member.mbs_expiration_date)}</span>
                 </div>
                 <div className="flex justify-between text-stone-700 dark:text-neutral-300">
                   <span>Renewal Term:</span>
@@ -449,7 +526,7 @@ export default function MemberProfile() {
                 </div>
                 <div className="flex justify-between text-stone-700 dark:text-neutral-300">
                   <span>New Expiry Date:</span>
-                  <span className="font-semibold text-[#0A5C36] dark:text-emerald-400">Nov 15, 2024</span>
+                  <span className="font-semibold text-[#0A5C36] dark:text-emerald-400">Updated after successful payment</span>
                 </div>
               </div>
 
@@ -480,7 +557,7 @@ export default function MemberProfile() {
                         <p className="font-bold text-stone-900 dark:text-white text-sm">Regular Rate</p>
                       </div>
                     </div>
-                    <span className="font-extrabold text-stone-900 dark:text-white text-sm">₱450.00</span>
+                    <span className="font-extrabold text-stone-900 dark:text-white text-sm">₱{Number(prices?.regularMonthly ?? 0).toFixed(2)}</span>
                   </div>
 
                   {/* Student Rate Option */}
@@ -505,7 +582,7 @@ export default function MemberProfile() {
                         <p className="text-[11px] text-stone-500 dark:text-neutral-400">Requires valid Student ID verification upon check-in</p>
                       </div>
                     </div>
-                    <span className="font-extrabold text-stone-900 dark:text-white text-sm">₱350.00</span>
+                    <span className="font-extrabold text-stone-900 dark:text-white text-sm">₱{Number(prices?.studentMonthly ?? 0).toFixed(2)}</span>
                   </div>
                 </div>
               </div>
@@ -597,10 +674,10 @@ export default function MemberProfile() {
                 </button>
                 <button
                   type="submit"
-                  disabled={!isReferenceValid}
+                  disabled={!isReferenceValid || isSaving || !prices}
                   className="w-1/2 bg-[#0A5C36] hover:bg-[#074729] text-white font-semibold py-3 rounded-xl text-sm shadow-md transition cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-[#0A5C36]"
                 >
-                  Confirm & Pay
+                  {isSaving ? 'Saving…' : 'Confirm & Pay'}
                 </button>
               </div>
 

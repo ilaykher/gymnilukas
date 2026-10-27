@@ -1,34 +1,51 @@
-import React, { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
+import { getActivity, getStaffAttendance } from '../../lib/api';
+import { escapeCsvCell } from '../../lib/csv';
+import { toStaffAttendanceRow } from '../../lib/staffAttendance';
 
 const PAGE_SIZE = 8;
 
-// Mock data. The first three entries are the "recent" ones on the Activity Log page.
-const activityLogs = [
-  { time: 'Oct 15, 10:42 AM', name: 'Sara Jimenez', action: 'New Monthly Membership', type: 'emerald', member: 'Jose Santos' },
-  { time: 'Oct 15, 09:15 AM', name: 'Elena Reyes', action: 'Renewed Monthly Membership', type: 'orange', member: 'Marco Jimenez' },
-  { time: 'Oct 14, 04:30 PM', name: 'Mark Valencia', action: 'Reset Member PIN', type: 'stone', member: 'Alma Vera' },
-  { time: 'Oct 14, 02:10 PM', name: 'Sara Jimenez', action: 'Renewed Monthly Membership', type: 'orange', member: 'Maria Ramos' },
-  { time: 'Oct 14, 11:25 AM', name: 'Elena Reyes', action: 'Walk-in Registration', type: 'blue', member: 'Ana Santos' },
-  { time: 'Oct 14, 09:05 AM', name: 'Daniel Katigbak', action: 'New Monthly Membership', type: 'emerald', member: 'Andrea Lim' },
-  { time: 'Oct 13, 05:40 PM', name: 'Elena Reyes', action: 'Walk-in Registration', type: 'blue', member: 'Diego Bautista' },
-  { time: 'Oct 13, 03:05 PM', name: 'Sara Jimenez', action: 'Renewed Monthly Membership', type: 'orange', member: 'Diego Torres' },
-  { time: 'Oct 13, 01:20 PM', name: 'Mark Valencia', action: 'New Monthly Membership', type: 'emerald', member: 'Ella Cruz' },
-  { time: 'Oct 13, 10:10 AM', name: 'Elena Reyes', action: 'Reset Member PIN', type: 'stone', member: 'Carla Reyes' },
-  { time: 'Oct 12, 06:45 PM', name: 'Daniel Katigbak', action: 'Walk-in Registration', type: 'blue', member: 'Liza Navarro' },
-  { time: 'Oct 12, 04:15 PM', name: 'Sara Jimenez', action: 'New Monthly Membership', type: 'emerald', member: 'Paolo Mendoza' },
-  { time: 'Oct 12, 01:30 PM', name: 'Elena Reyes', action: 'Renewed Monthly Membership', type: 'orange', member: 'Rafael Soriano' },
-  { time: 'Oct 12, 09:50 AM', name: 'Mark Valencia', action: 'Walk-in Registration', type: 'blue', member: 'Noel Garcia' },
-  { time: 'Oct 11, 05:20 PM', name: 'Daniel Katigbak', action: 'Renewed Monthly Membership', type: 'orange', member: 'Bea Villanueva' },
-  { time: 'Oct 11, 02:40 PM', name: 'Sara Jimenez', action: 'Reset Member PIN', type: 'stone', member: 'Trisha Lim' },
-  { time: 'Oct 11, 11:15 AM', name: 'Elena Reyes', action: 'New Monthly Membership', type: 'emerald', member: 'Miguel Jacinto' },
-  { time: 'Oct 11, 08:30 AM', name: 'Mark Valencia', action: 'Renewed Monthly Membership', type: 'orange', member: 'Juan Dizon' },
-];
+const ACTION_LABELS = {
+  'member.registered': 'New Membership',
+  'membership.renewed': 'Renewed Membership',
+  'member.checked_in': 'Member Check-in',
+  'member.pin_reset': 'Reset Member PIN',
+  'member.weight_recorded': 'Recorded Member Weight',
+  'walk_in.registered': 'Walk-in Registration',
+  'employee.created': 'Created Employee Account',
+  'employee.updated': 'Updated Employee Account',
+  'employee.password_reset': 'Reset Employee Password',
+};
 
-const attendanceRows = [
-  { name: 'Sara Jimenez', date: 'Oct 15, 2024', timeIn: '08:00 AM', timeOut: '05:00 PM', hours: '9.0 hrs', status: 'Shift Completed' },
-  { name: 'Elena Reyes', date: 'Oct 15, 2024', timeIn: '09:00 AM', timeOut: '--:--', hours: '--', status: 'On Duty' },
-];
+function toActivityLog(row) {
+  const details = row.activity_details || {};
+  const action = ACTION_LABELS[row.activity_action] || row.activity_action.replaceAll('.', ' ');
+  const type = row.activity_action.includes('registered') ? 'emerald'
+    : row.activity_action.includes('renewed') ? 'orange'
+      : row.activity_action.startsWith('walk_in') ? 'blue' : 'stone';
+  return {
+    time: new Date(row.activity_date_created).toLocaleString(),
+    name: row.actor_name || 'System',
+    action,
+    type,
+    member: details.name || details.memberName || `${row.entity_type} #${row.entity_id}`,
+  };
+}
+
+function exportActivityCsv(rows) {
+  const headers = ['Time & Date', 'Staff Name', 'Action Done', 'Affected Member'];
+  const lines = rows.map((row) => [row.time, row.name, row.action, row.member]);
+  const csv = [headers, ...lines]
+    .map((line) => line.map(escapeCsvCell).join(','))
+    .join('\r\n');
+  const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = 'fitnexx-activity-log.csv';
+  link.click();
+  URL.revokeObjectURL(url);
+}
 
 const ACTION_STYLES = {
   emerald: {
@@ -146,14 +163,14 @@ function Pagination({ page, totalPages, onChange }) {
 }
 
 // "View Older Activities" screen: every activity, searchable by staff name, with pagination.
-function AllActivities({ onBack }) {
+function AllActivities({ onBack, activityLogs, loading, error }) {
   const [searchTerm, setSearchTerm] = useState('');
   const [page, setPage] = useState(1);
 
   const filtered = useMemo(() => {
     const q = searchTerm.trim().toLowerCase();
     return activityLogs.filter((log) => !q || log.name.toLowerCase().includes(q));
-  }, [searchTerm]);
+  }, [activityLogs, searchTerm]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const currentPage = Math.min(page, totalPages);
@@ -166,7 +183,7 @@ function AllActivities({ onBack }) {
         <div>
           <h2 className="text-2xl font-bold text-stone-900 dark:text-white">All Staff Activities</h2>
           <p className="text-stone-500 dark:text-neutral-400 text-sm mt-1">
-            Every recorded staff action. Search by staff name to narrow it down.
+            The most recent 500 recorded staff actions. Search by staff name to narrow it down.
           </p>
         </div>
         <button
@@ -216,7 +233,9 @@ function AllActivities({ onBack }) {
       </div>
 
       <div className="bg-white dark:bg-neutral-900 rounded-2xl border border-stone-200 dark:border-neutral-800 shadow-sm overflow-hidden transition-colors duration-200">
-        <LogTable rows={pageRows} emptyMessage="No staff activity matches your search." />
+        {error ? <p role="alert" className="p-6 text-center text-red-600 dark:text-red-400">{error}</p> : (
+          <LogTable rows={pageRows} emptyMessage={loading ? 'Loading staff activity…' : 'No staff activity matches your search.'} />
+        )}
 
         <div className="p-4 border-t border-stone-200 dark:border-neutral-800 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-stone-500 dark:text-neutral-400 bg-stone-50/50 dark:bg-neutral-800/40">
           <span aria-live="polite">
@@ -233,9 +252,64 @@ export default function ActivityLog() {
   // ?view=all keeps the "all activities" screen in the URL, so the browser Back button works too.
   const [searchParams, setSearchParams] = useSearchParams();
   const showAll = searchParams.get('view') === 'all';
+  const [activityLogs, setActivityLogs] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [staffAttendance, setStaffAttendance] = useState([]);
+  const [staffAttendanceLoading, setStaffAttendanceLoading] = useState(true);
+  const [staffAttendanceError, setStaffAttendanceError] = useState('');
+
+  useEffect(() => {
+    const controller = new AbortController();
+    getActivity({ signal: controller.signal, limit: 500 })
+      .then((rows) => setActivityLogs(rows.map(toActivityLog)))
+      .catch((requestError) => {
+        if (requestError.name !== 'AbortError') setError(requestError.message);
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setLoading(false);
+      });
+    return () => controller.abort();
+  }, []);
+
+  useEffect(() => {
+    let active = true;
+    let controller;
+    const loadAttendance = () => {
+      controller?.abort();
+      controller = new AbortController();
+      getStaffAttendance({ signal: controller.signal, limit: 100 })
+        .then((records) => {
+          if (active) {
+            setStaffAttendance(records);
+            setStaffAttendanceError('');
+          }
+        })
+        .catch((requestError) => {
+          if (active && requestError.name !== 'AbortError') {
+            setStaffAttendanceError(requestError.message);
+          }
+        })
+        .finally(() => {
+          if (active) setStaffAttendanceLoading(false);
+        });
+    };
+    const refreshOnFocus = () => {
+      if (document.visibilityState === 'visible') loadAttendance();
+    };
+    loadAttendance();
+    const interval = setInterval(loadAttendance, 30_000);
+    window.addEventListener('focus', refreshOnFocus);
+    return () => {
+      active = false;
+      controller?.abort();
+      clearInterval(interval);
+      window.removeEventListener('focus', refreshOnFocus);
+    };
+  }, []);
 
   if (showAll) {
-    return <AllActivities onBack={() => setSearchParams({})} />;
+    return <AllActivities onBack={() => setSearchParams({})} activityLogs={activityLogs} loading={loading} error={error} />;
   }
 
   return (
@@ -252,7 +326,7 @@ export default function ActivityLog() {
             <svg className="w-4 h-4 text-stone-500 dark:text-neutral-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
             </svg>
-            <span>Oct 15, 2024</span>
+            <span>{new Date().toLocaleDateString()}</span>
           </div>
         </div>
       </div>
@@ -260,7 +334,7 @@ export default function ActivityLog() {
       <div className="bg-white dark:bg-neutral-900 rounded-2xl border border-stone-200 dark:border-neutral-800 shadow-sm overflow-hidden transition-colors duration-200">
         <div className="p-6 border-b border-stone-200 dark:border-neutral-800 flex items-center justify-between">
           <h3 className="font-bold text-stone-900 dark:text-white text-base">Recent Staff Activities</h3>
-          <button type="button" className="text-xs font-semibold text-[#0A5C36] dark:text-emerald-400 hover:underline flex items-center space-x-1.5 cursor-pointer">
+          <button type="button" onClick={() => exportActivityCsv(activityLogs)} disabled={activityLogs.length === 0} className="text-xs font-semibold text-[#0A5C36] dark:text-emerald-400 hover:underline flex items-center space-x-1.5 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed">
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
             </svg>
@@ -268,7 +342,9 @@ export default function ActivityLog() {
           </button>
         </div>
 
-        <LogTable rows={activityLogs.slice(0, 3)} />
+        {error ? <p role="alert" className="p-6 text-center text-red-600 dark:text-red-400">{error}</p> : (
+          <LogTable rows={activityLogs.slice(0, 3)} emptyMessage={loading ? 'Loading staff activity…' : undefined} />
+        )}
 
         <div className="p-4 border-t border-stone-200 dark:border-neutral-800 text-center bg-stone-50/50 dark:bg-neutral-800/40">
           <button
@@ -302,30 +378,37 @@ export default function ActivityLog() {
               </tr>
             </thead>
             <tbody className="divide-y divide-stone-100 dark:divide-neutral-800 text-sm">
-              {attendanceRows.map((att) => (
-                <tr key={att.name} className="hover:bg-stone-50/50 dark:hover:bg-neutral-800/50 transition">
-                  <td className="py-4 px-6">
-                    <div className="flex items-center space-x-3">
-                      <div className="w-8 h-8 rounded-full bg-stone-200 dark:bg-neutral-800 text-stone-700 dark:text-neutral-300 font-bold text-xs flex items-center justify-center shrink-0">
-                        {getInitials(att.name)}
-                      </div>
-                      <span className="font-semibold text-stone-900 dark:text-white">{att.name}</span>
-                    </div>
+              {staffAttendanceError ? (
+                <tr>
+                  <td colSpan={6} role="alert" className="py-10 text-center text-red-600 dark:text-red-400">
+                    Unable to load staff shift attendance: {staffAttendanceError}
                   </td>
-                  <td className="py-4 px-6 text-stone-600 dark:text-neutral-400 text-xs">{att.date}</td>
-                  <td className="py-4 px-6 font-medium text-stone-800 dark:text-neutral-200 text-xs">{att.timeIn}</td>
-                  <td className="py-4 px-6 font-medium text-stone-800 dark:text-neutral-200 text-xs">{att.timeOut}</td>
-                  <td className="py-4 px-6 text-stone-600 dark:text-neutral-400 text-xs">{att.hours}</td>
+                </tr>
+              ) : staffAttendanceLoading ? (
+                <tr><td colSpan={6} role="status" className="py-10 text-center text-stone-500 dark:text-neutral-400">Loading staff shift attendance…</td></tr>
+              ) : staffAttendance.length === 0 ? (
+                <tr><td colSpan={6} className="py-10 text-center text-stone-500 dark:text-neutral-400">No staff shift attendance recorded yet.</td></tr>
+              ) : staffAttendance.map((record) => {
+                const row = toStaffAttendanceRow(record);
+                return (
+                <tr key={row.id} className="hover:bg-stone-50/50 dark:hover:bg-neutral-800/50 transition">
+                  <td className="py-4 px-6 font-semibold text-stone-900 dark:text-white">{row.name}</td>
+                  <td className="py-4 px-6 text-stone-600 dark:text-neutral-400">{row.date}</td>
+                  <td className="py-4 px-6 text-stone-600 dark:text-neutral-400">{row.timeIn}</td>
+                  <td className="py-4 px-6 text-stone-600 dark:text-neutral-400">{row.timeOut}</td>
+                  <td className="py-4 px-6 text-stone-600 dark:text-neutral-400">{row.totalHours}</td>
                   <td className="py-4 px-6">
-                    <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium space-x-1.5 ${
-                      att.status === 'Shift Completed' ? 'bg-emerald-100 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300' : 'bg-emerald-600 text-white shadow-sm'
+                    <span className={`inline-flex rounded-full px-2.5 py-1 text-xs font-medium ${
+                      row.status === 'On shift'
+                        ? 'bg-emerald-100 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300'
+                        : 'bg-stone-100 dark:bg-neutral-800 text-stone-700 dark:text-neutral-300'
                     }`}>
-                      {att.status === 'Shift Completed' && <span className="w-1.5 h-1.5 rounded-full bg-emerald-600 dark:bg-emerald-400"></span>}
-                      <span>{att.status}</span>
+                      {row.status}
                     </span>
                   </td>
                 </tr>
-              ))}
+                );
+              })}
             </tbody>
           </table>
         </div>

@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Routes, Route, useNavigate } from 'react-router-dom';
 import AdminSidebar from '../../components/admin/AdminSidebar';
 import Employees from './Employees';
@@ -6,39 +6,18 @@ import RegisterEmployee from './RegisterEmployee';
 import ActivityLog from './ActivityLog';
 import Transactions from './Transactions';
 import Settings from '../Settings';
+import { useAuth } from '../../context/useAuth';
+import { getReport, getTransactions } from '../../lib/api';
+import { escapeCsvCell } from '../../lib/csv';
+import {
+  defaultReportRange,
+  formatReportRange,
+  pickerValuesToRange,
+  rangeToPickerValues,
+  sumReportBuckets,
+} from '../../lib/reportRange';
 
-// ---------------------------------------------------------------------------
-// Mock report data. Every timeframe has its own labels, so the x-axis labels,
-// data points and tooltips always come from the same arrays and cannot drift apart.
-// The cards show the LATEST bucket of the selected timeframe (the one named by
-// `periodLabel`); the chart shows the trend leading up to it.
-// ---------------------------------------------------------------------------
-const TIMEFRAMES = {
-  Daily: {
-    periodLabel: 'Oct 15, 2024',
-    cardPeriod: 'Oct 15, 2024',
-    labels: ['Oct 9', 'Oct 10', 'Oct 11', 'Oct 12', 'Oct 13', 'Oct 14', 'Oct 15'],
-    fullLabels: ['Oct 9, 2024', 'Oct 10, 2024', 'Oct 11, 2024', 'Oct 12, 2024', 'Oct 13, 2024', 'Oct 14, 2024', 'Oct 15, 2024'],
-    membership: [2900, 3350, 3100, 4200, 3900, 3650, 3800],
-    walkIn: [450, 520, 380, 610, 740, 560, 700],
-  },
-  Monthly: {
-    periodLabel: 'Oct 01, 2024 - Oct 31, 2024',
-    cardPeriod: 'Oct 2024',
-    labels: ['May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct'],
-    fullLabels: ['May 2024', 'Jun 2024', 'Jul 2024', 'Aug 2024', 'Sep 2024', 'Oct 2024'],
-    membership: [78000, 85500, 91000, 96500, 99000, 102000],
-    walkIn: [14500, 16000, 17800, 19500, 21000, 22500],
-  },
-  Yearly: {
-    periodLabel: 'Jan 01, 2024 - Dec 31, 2024',
-    cardPeriod: '2024',
-    labels: ['2020', '2021', '2022', '2023', '2024'],
-    fullLabels: ['2020', '2021', '2022', '2023', '2024'],
-    membership: [520000, 640000, 780000, 930000, 1086000],
-    walkIn: [96000, 128000, 165000, 204000, 241500],
-  },
-};
+const TIMEFRAMES = ['Daily', 'Monthly', 'Yearly'];
 
 const REVENUE_FILTERS = [
   { value: 'All Revenues', label: 'All Revenues' },
@@ -51,15 +30,6 @@ const FILTER_CATEGORY = {
   Membership: 'Membership Renewal',
   'Walk-in': 'Daily Pass',
 };
-
-const RECENT_TRANSACTIONS = [
-  { id: '#TRX-8924', date: 'Today, 10:42 AM', name: 'Jose Santos', cat: 'Membership Renewal', method: 'GCash', amount: '₱499.00' },
-  { id: '#TRX-8923', date: 'Today, 09:15 AM', name: 'Guest User', cat: 'Daily Pass', method: 'Cash', amount: '₱25.00' },
-  { id: '#TRX-8922', date: 'Yesterday, 04:30 PM', name: 'Alma Vera', cat: 'Membership Renewal', method: 'GCash', amount: '₱75.00' },
-  { id: '#TRX-8921', date: 'Yesterday, 02:10 PM', name: 'Jose Santos', cat: 'Membership Renewal', method: 'GCash', amount: '₱1,200.00' },
-  { id: '#TRX-8920', date: 'Yesterday, 11:45 AM', name: 'Mark Valencia', cat: 'Membership Renewal', method: 'Cash', amount: '₱850.00' },
-  { id: '#TRX-8918', date: 'Yesterday, 08:05 AM', name: 'Guest User', cat: 'Daily Pass', method: 'Cash', amount: '₱15.00' },
-];
 
 const SERIES = [
   {
@@ -114,6 +84,9 @@ function RevenueChart({ data, visibleKeys }) {
 
   const series = SERIES.filter((s) => visibleKeys.includes(s.key));
   const count = data.labels.length;
+  if (!count) {
+    return <p className="py-10 text-center text-stone-500 dark:text-neutral-400">No revenue recorded for this period.</p>;
+  }
   const maxValue = Math.max(...series.flatMap((s) => data[s.key]));
   const { step, top } = niceScale(maxValue);
   const ticks = Array.from({ length: GRID_INTERVALS + 1 }, (_, i) => step * i);
@@ -264,21 +237,122 @@ function RevenueChart({ data, visibleKeys }) {
 function AdminReportsView() {
   const navigate = useNavigate();
   const [timeframe, setTimeframe] = useState('Monthly');
+  const [dateRange, setDateRange] = useState(() => defaultReportRange('Monthly'));
+  const [draftRange, setDraftRange] = useState(() => rangeToPickerValues(
+    'Monthly',
+    defaultReportRange('Monthly')
+  ));
+  const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
   const [revenueFilter, setRevenueFilter] = useState('All Revenues');
+  const reportKey = `${timeframe}:${dateRange.from}:${dateRange.to}`;
+  const transactionsKey = `${dateRange.from}:${dateRange.to}`;
+  const [reportResult, setReportResult] = useState({ key: '', data: null, error: '' });
+  const [transactionResult, setTransactionResult] = useState({ key: '', data: [], error: '' });
 
-  const data = TIMEFRAMES[timeframe];
+  useEffect(() => {
+    const controller = new AbortController();
+    getReport(timeframe, {
+      from: dateRange.from,
+      to: dateRange.to,
+      signal: controller.signal,
+    })
+      .then((report) => setReportResult({ key: reportKey, data: report, error: '' }))
+      .catch((error) => {
+        if (error.name !== 'AbortError') setReportResult({ key: reportKey, data: null, error: error.message });
+      });
+    return () => controller.abort();
+  }, [timeframe, dateRange.from, dateRange.to, reportKey]);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    getTransactions({
+      from: dateRange.from,
+      to: dateRange.to,
+      signal: controller.signal,
+    })
+      .then((transactions) => setTransactionResult({ key: transactionsKey, data: transactions, error: '' }))
+      .catch((error) => {
+        if (error.name !== 'AbortError') setTransactionResult({ key: transactionsKey, data: [], error: error.message });
+      });
+    return () => controller.abort();
+  }, [dateRange.from, dateRange.to, transactionsKey]);
+
+  const chartData = reportResult.key === reportKey && reportResult.data ? reportResult.data : {
+    periodLabel: '',
+    cardPeriod: '',
+    labels: [],
+    fullLabels: [],
+    membership: [],
+    walkIn: [],
+  };
+  const reportError = reportResult.key === reportKey ? reportResult.error : '';
   const showMembership = revenueFilter !== 'Walk-in';
   const showWalkIn = revenueFilter !== 'Membership';
   const visibleKeys = [showMembership && 'membership', showWalkIn && 'walkIn'].filter(Boolean);
 
-  const latestMembership = data.membership[data.membership.length - 1];
-  const latestWalkIn = data.walkIn[data.walkIn.length - 1];
-  const totalEarnings = (showMembership ? latestMembership : 0) + (showWalkIn ? latestWalkIn : 0);
+  const totalMembership = sumReportBuckets(chartData.membership);
+  const totalWalkIn = sumReportBuckets(chartData.walkIn);
+  const totalEarnings = (showMembership ? totalMembership : 0) + (showWalkIn ? totalWalkIn : 0);
 
   const filterNote = revenueFilter === 'All Revenues' ? '' : ` · ${revenueFilter === 'Walk-in' ? 'Walk-in' : 'Membership'} only`;
 
   const category = FILTER_CATEGORY[revenueFilter];
-  const recentRows = RECENT_TRANSACTIONS.filter((trx) => !category || trx.cat === category).slice(0, 5);
+  const transactions = transactionResult.key === transactionsKey ? transactionResult.data : [];
+  const transactionsError = transactionResult.key === transactionsKey ? transactionResult.error : '';
+  const transactionsLoading = transactionResult.key !== transactionsKey;
+  const filteredTransactions = transactions.filter((trx) => !category || trx.category === category);
+  const toTransactionRow = (trx) => ({
+      id: trx.transaction_id,
+      date: new Date(trx.transaction_date_created).toLocaleString('en-PH', { timeZone: 'Asia/Manila' }),
+      name: trx.customer_name || 'Walk-in customer',
+      cat: trx.category,
+      method: trx.payment_method || '—',
+      amount: peso(Number(trx.amount)),
+    });
+  const recentRows = filteredTransactions.slice(0, 5).map(toTransactionRow);
+  const normalizedDraft = pickerValuesToRange(timeframe, draftRange);
+  const draftIsValid = normalizedDraft && normalizedDraft.from <= normalizedDraft.to;
+
+  const switchTimeframe = (nextTimeframe) => {
+    const nextRange = defaultReportRange(nextTimeframe);
+    setTimeframe(nextTimeframe);
+    setDateRange(nextRange);
+    setDraftRange(rangeToPickerValues(nextTimeframe, nextRange));
+    setIsDatePickerOpen(false);
+  };
+
+  const updateDraft = (field, value) => {
+    setDraftRange((current) => ({ ...current, [field]: value }));
+  };
+
+  const applyDateRange = (event) => {
+    event.preventDefault();
+    if (!draftIsValid) return;
+    setDateRange(normalizedDraft);
+    setIsDatePickerOpen(false);
+  };
+
+  const resetDateRange = () => {
+    const nextRange = defaultReportRange(timeframe);
+    setDraftRange(rangeToPickerValues(timeframe, nextRange));
+    setDateRange(nextRange);
+    setIsDatePickerOpen(false);
+  };
+
+  const exportCsv = () => {
+    const headers = ['Transaction ID', 'Date', 'Customer', 'Category', 'Payment Method', 'Amount'];
+    const rows = filteredTransactions.map(toTransactionRow)
+      .map((trx) => [trx.id, trx.date, trx.name, trx.cat, trx.method, trx.amount]);
+    const csv = [headers, ...rows]
+      .map((row) => row.map(escapeCsvCell).join(','))
+      .join('\r\n');
+    const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'fitnexx-transactions.csv';
+    link.click();
+    URL.revokeObjectURL(url);
+  };
 
   return (
     <div className="space-y-6 transition-colors duration-200">
@@ -290,11 +364,11 @@ function AdminReportsView() {
 
         <div className="flex flex-wrap items-center gap-3">
           <div className="bg-white dark:bg-neutral-900 border border-stone-200 dark:border-neutral-800 p-1 rounded-xl flex items-center shadow-sm text-xs font-semibold transition-colors duration-200">
-            {Object.keys(TIMEFRAMES).map((item) => (
+            {TIMEFRAMES.map((item) => (
               <button
                 key={item}
                 type="button"
-                onClick={() => setTimeframe(item)}
+                onClick={() => switchTimeframe(item)}
                 aria-pressed={timeframe === item}
                 className={`px-3.5 py-1.5 rounded-lg transition cursor-pointer ${
                   timeframe === item ? 'bg-[#0A5C36] text-white' : 'text-stone-600 dark:text-neutral-400 hover:bg-stone-100 dark:hover:bg-neutral-800'
@@ -305,11 +379,77 @@ function AdminReportsView() {
             ))}
           </div>
 
-          <div className="bg-white dark:bg-neutral-900 border border-stone-200 dark:border-neutral-800 px-3.5 py-2 rounded-xl text-xs font-semibold text-stone-700 dark:text-neutral-300 shadow-sm flex items-center space-x-2 transition-colors duration-200">
-            <svg className="w-4 h-4 text-stone-500 dark:text-neutral-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-            </svg>
-            <span>{data.periodLabel}</span>
+          <div className="relative">
+            <button
+              type="button"
+              onClick={() => {
+                setDraftRange(rangeToPickerValues(timeframe, dateRange));
+                setIsDatePickerOpen((open) => !open);
+              }}
+              aria-haspopup="dialog"
+              aria-expanded={isDatePickerOpen}
+              className="bg-white dark:bg-neutral-900 border border-stone-200 dark:border-neutral-800 px-3.5 py-2 rounded-xl text-xs font-semibold text-stone-700 dark:text-neutral-300 shadow-sm flex items-center space-x-2 transition-colors duration-200 cursor-pointer focus:outline-none focus:ring-2 focus:ring-[#0A5C36]"
+            >
+              <svg className="w-4 h-4 text-stone-500 dark:text-neutral-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+              </svg>
+              <span>{formatReportRange(timeframe, dateRange)}</span>
+            </button>
+            {isDatePickerOpen && (
+              <form
+                role="dialog"
+                aria-label={`${timeframe} date range`}
+                onSubmit={applyDateRange}
+                className="absolute right-0 top-full z-30 mt-2 w-72 rounded-2xl border border-stone-200 dark:border-neutral-700 bg-white dark:bg-neutral-900 p-4 shadow-xl"
+              >
+                <div className="grid grid-cols-2 gap-3">
+                  {['start', 'end'].map((field) => (
+                    <label key={field} className="space-y-1 text-xs font-semibold text-stone-600 dark:text-neutral-300">
+                      <span>{field === 'start' ? 'Start' : 'End'}</span>
+                      <input
+                        type={timeframe === 'Daily' ? 'date' : timeframe === 'Monthly' ? 'month' : 'number'}
+                        min={timeframe === 'Yearly' ? '1' : undefined}
+                        max={timeframe === 'Yearly' ? '9999' : undefined}
+                        step={timeframe === 'Yearly' ? '1' : undefined}
+                        value={draftRange[field]}
+                        onChange={(event) => updateDraft(field, event.target.value)}
+                        aria-label={`${field === 'start' ? 'Start' : 'End'} ${timeframe === 'Daily' ? 'date' : timeframe === 'Monthly' ? 'month' : 'year'}`}
+                        className="w-full rounded-lg border border-stone-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 px-2 py-2 text-stone-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#0A5C36]"
+                      />
+                    </label>
+                  ))}
+                </div>
+                {!draftIsValid && (
+                  <p role="alert" className="mt-2 text-xs text-red-600 dark:text-red-400">
+                    Choose a valid range with the start on or before the end.
+                  </p>
+                )}
+                <div className="mt-4 flex justify-between gap-2 text-xs font-semibold">
+                  <button type="button" onClick={resetDateRange} className="text-stone-600 dark:text-neutral-300 hover:underline">
+                    Reset
+                  </button>
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setDraftRange(rangeToPickerValues(timeframe, dateRange));
+                        setIsDatePickerOpen(false);
+                      }}
+                      className="rounded-lg px-3 py-2 text-stone-600 dark:text-neutral-300 hover:bg-stone-100 dark:hover:bg-neutral-800"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={!draftIsValid}
+                      className="rounded-lg bg-[#0A5C36] px-3 py-2 text-white disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      Apply
+                    </button>
+                  </div>
+                </div>
+              </form>
+            )}
           </div>
         </div>
       </div>
@@ -328,11 +468,11 @@ function AdminReportsView() {
           ))}
         </select>
 
-        <button type="button" className="bg-white dark:bg-neutral-900 border border-stone-200 dark:border-neutral-800 hover:bg-stone-50 dark:hover:bg-neutral-800 px-4 py-2 rounded-xl text-xs font-semibold text-stone-700 dark:text-neutral-300 shadow-sm flex items-center space-x-2 transition cursor-pointer">
+        <button type="button" onClick={exportCsv} disabled={filteredTransactions.length === 0} className="bg-white dark:bg-neutral-900 border border-stone-200 dark:border-neutral-800 hover:bg-stone-50 dark:hover:bg-neutral-800 px-4 py-2 rounded-xl text-xs font-semibold text-stone-700 dark:text-neutral-300 shadow-sm flex items-center space-x-2 transition cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed">
           <svg className="w-4 h-4 text-stone-500 dark:text-neutral-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
           </svg>
-          <span>Export CSV / PDF</span>
+          <span>Export CSV</span>
         </button>
       </div>
 
@@ -344,7 +484,7 @@ function AdminReportsView() {
             <div className="w-8 h-8 rounded-xl bg-emerald-50 dark:bg-emerald-950 text-[#0A5C36] dark:text-emerald-400 flex items-center justify-center font-bold">₱</div>
           </div>
           <h3 className="text-3xl font-extrabold text-stone-900 dark:text-white mt-1">{peso(totalEarnings)}</h3>
-          <p className="text-xs text-stone-400 dark:text-neutral-500 mt-1">{data.cardPeriod}{filterNote}</p>
+          <p className="text-xs text-stone-400 dark:text-neutral-500 mt-1">{formatReportRange(timeframe, dateRange)}{filterNote}</p>
         </div>
 
         <div className={`bg-white dark:bg-neutral-900 p-6 rounded-2xl border border-stone-200 dark:border-neutral-800 shadow-sm relative overflow-hidden transition duration-200 ${showMembership ? '' : 'opacity-50'}`}>
@@ -356,8 +496,8 @@ function AdminReportsView() {
               </svg>
             </div>
           </div>
-          <h3 className="text-3xl font-extrabold text-stone-900 dark:text-white mt-1">{peso(latestMembership)}</h3>
-          <p className="text-xs text-stone-400 dark:text-neutral-500 mt-1">{data.cardPeriod}</p>
+          <h3 className="text-3xl font-extrabold text-stone-900 dark:text-white mt-1">{peso(totalMembership)}</h3>
+          <p className="text-xs text-stone-400 dark:text-neutral-500 mt-1">{formatReportRange(timeframe, dateRange)}</p>
         </div>
 
         <div className={`bg-white dark:bg-neutral-900 p-6 rounded-2xl border border-stone-200 dark:border-neutral-800 shadow-sm relative overflow-hidden transition duration-200 ${showWalkIn ? '' : 'opacity-50'}`}>
@@ -369,8 +509,8 @@ function AdminReportsView() {
               </svg>
             </div>
           </div>
-          <h3 className="text-3xl font-extrabold text-stone-900 dark:text-white mt-1">{peso(latestWalkIn)}</h3>
-          <p className="text-xs text-stone-400 dark:text-neutral-500 mt-1">{data.cardPeriod}</p>
+          <h3 className="text-3xl font-extrabold text-stone-900 dark:text-white mt-1">{peso(totalWalkIn)}</h3>
+          <p className="text-xs text-stone-400 dark:text-neutral-500 mt-1">{formatReportRange(timeframe, dateRange)}</p>
         </div>
       </div>
 
@@ -389,7 +529,13 @@ function AdminReportsView() {
         </div>
 
         {/* key resets the hover state whenever the timeframe or filter changes */}
-        <RevenueChart key={`${timeframe}-${revenueFilter}`} data={data} visibleKeys={visibleKeys} />
+        {reportError ? (
+          <p role="alert" className="py-10 text-center text-red-600 dark:text-red-400">{reportError}</p>
+        ) : reportResult.key !== reportKey ? (
+          <p className="py-10 text-center text-stone-500 dark:text-neutral-400" role="status">Loading report…</p>
+        ) : (
+          <RevenueChart key={`${timeframe}-${dateRange.from}-${dateRange.to}-${revenueFilter}`} data={chartData} visibleKeys={visibleKeys} />
+        )}
       </div>
 
       {/* Recent transactions */}
@@ -418,7 +564,11 @@ function AdminReportsView() {
               </tr>
             </thead>
             <tbody className="divide-y divide-stone-100 dark:divide-neutral-800 text-sm">
-              {recentRows.length === 0 && (
+              {transactionsError ? (
+                <tr><td colSpan={6} role="alert" className="py-10 text-center text-red-600 dark:text-red-400">{transactionsError}</td></tr>
+              ) : transactionsLoading ? (
+                <tr><td colSpan={6} role="status" className="py-10 text-center text-stone-500 dark:text-neutral-400">Loading transactions…</td></tr>
+              ) : recentRows.length === 0 && (
                 <tr>
                   <td colSpan={6} className="py-10 text-center text-stone-500 dark:text-neutral-400">
                     No recent transactions for this revenue type.
@@ -463,6 +613,7 @@ export default function AdminDashboard() {
   const [isLogoutOpen, setIsLogoutOpen] = useState(false);
   const dropdownRef = useRef(null);
   const navigate = useNavigate();
+  const { user, signOut } = useAuth();
 
   useEffect(() => {
     function handleClickOutside(event) {
@@ -493,7 +644,8 @@ export default function AdminDashboard() {
 
   const handleLogout = () => {
     setIsLogoutOpen(false);
-    navigate('/login');
+    signOut();
+    navigate('/login', { replace: true });
   };
 
   return (
@@ -520,9 +672,9 @@ export default function AdminDashboard() {
             {dropdownOpen && (
               <div className="absolute right-0 mt-2 w-64 bg-white dark:bg-neutral-900 border border-stone-200 dark:border-neutral-800 rounded-2xl shadow-xl py-3 px-4 z-50 animate-in fade-in zoom-in-95 transition-colors duration-200">
                 <div className="pb-3 border-b border-stone-100 dark:border-neutral-800">
-                  <h4 className="font-bold text-stone-900 dark:text-white text-sm">Lucas Admin</h4>
+                  <h4 className="font-bold text-stone-900 dark:text-white text-sm">{user?.name || user?.username}</h4>
                   <span className="inline-block mt-1 px-2.5 py-0.5 bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 text-[11px] font-semibold rounded-md">
-                    System Administrator
+                    {user?.role === 'admin' ? 'System Administrator' : 'Staff'}
                   </span>
                 </div>
 

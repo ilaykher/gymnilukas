@@ -1,26 +1,10 @@
-import React, { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { getTransactions } from '../../lib/api';
+import { escapeCsvCell } from '../../lib/csv';
 
 const PAGE_SIZE = 6;
 const CATEGORIES = ['Membership Renewal', 'Daily Pass'];
 const PAYMENT_METHODS = ['GCash', 'Cash'];
-
-// Mock data (amount is a number so it can be formatted consistently).
-const TRANSACTIONS = [
-  { id: '#TRX-8924', date: 'Today, 10:42 AM', name: 'Jose Santos', cat: 'Membership Renewal', method: 'GCash', amount: 499 },
-  { id: '#TRX-8923', date: 'Today, 09:15 AM', name: 'Guest User', cat: 'Daily Pass', method: 'Cash', amount: 25 },
-  { id: '#TRX-8922', date: 'Yesterday, 04:30 PM', name: 'Alma Vera', cat: 'Membership Renewal', method: 'GCash', amount: 75 },
-  { id: '#TRX-8921', date: 'Yesterday, 02:10 PM', name: 'Jose Santos', cat: 'Membership Renewal', method: 'GCash', amount: 1200 },
-  { id: '#TRX-8920', date: 'Yesterday, 11:45 AM', name: 'Mark Valencia', cat: 'Membership Renewal', method: 'Cash', amount: 850 },
-  { id: '#TRX-8919', date: 'Yesterday, 09:20 AM', name: 'Elena Reyes', cat: 'Membership Renewal', method: 'GCash', amount: 499 },
-  { id: '#TRX-8918', date: 'Oct 13, 05:40 PM', name: 'Ana Santos', cat: 'Daily Pass', method: 'Cash', amount: 15 },
-  { id: '#TRX-8917', date: 'Oct 13, 03:05 PM', name: 'Marco Jimenez', cat: 'Membership Renewal', method: 'GCash', amount: 450 },
-  { id: '#TRX-8916', date: 'Oct 13, 10:20 AM', name: 'Guest User', cat: 'Daily Pass', method: 'Cash', amount: 15 },
-  { id: '#TRX-8915', date: 'Oct 12, 06:45 PM', name: 'Andrea Lim', cat: 'Membership Renewal', method: 'Cash', amount: 350 },
-  { id: '#TRX-8914', date: 'Oct 12, 01:15 PM', name: 'Diego Torres', cat: 'Membership Renewal', method: 'GCash', amount: 450 },
-  { id: '#TRX-8913', date: 'Oct 12, 09:30 AM', name: 'Guest User', cat: 'Daily Pass', method: 'GCash', amount: 15 },
-  { id: '#TRX-8912', date: 'Oct 11, 04:10 PM', name: 'Maria Ramos', cat: 'Membership Renewal', method: 'Cash', amount: 350 },
-  { id: '#TRX-8911', date: 'Oct 11, 11:00 AM', name: 'Guest User', cat: 'Daily Pass', method: 'Cash', amount: 15 },
-];
 
 const formatPeso = (amount) =>
   `₱${amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -34,23 +18,46 @@ const selectClass =
   'w-full px-3.5 py-2 bg-white dark:bg-neutral-800 border border-stone-200 dark:border-neutral-700 rounded-xl text-stone-700 dark:text-neutral-300 text-xs focus:outline-none focus:ring-2 focus:ring-[#0A5C36] cursor-pointer';
 
 export default function Transactions() {
+  const [transactions, setTransactions] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [revenueCategory, setRevenueCategory] = useState('All');
   const [paymentMethod, setPaymentMethod] = useState('All');
   const [page, setPage] = useState(1);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    getTransactions({ signal: controller.signal })
+      .then((rows) => setTransactions(rows.map((row) => ({
+        id: `#TRX-${row.transaction_id}`,
+        date: new Date(row.transaction_date_created).toLocaleString(),
+        name: row.customer_name,
+        cat: row.category,
+        method: row.payment_method ? `${row.payment_method[0].toUpperCase()}${row.payment_method.slice(1)}` : '—',
+        amount: Number(row.amount),
+      }))))
+      .catch((error) => {
+        if (!controller.signal.aborted) setLoadError(error.message);
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setLoading(false);
+      });
+    return () => controller.abort();
+  }, []);
 
   const hasActiveFilters = searchQuery.trim() !== '' || revenueCategory !== 'All' || paymentMethod !== 'All';
 
   // Filters are applied instantly on every keystroke / selection.
   const filtered = useMemo(() => {
     const q = normalize(searchQuery);
-    return TRANSACTIONS.filter((trx) => {
+    return transactions.filter((trx) => {
       const matchesSearch = !q || normalize(trx.id).includes(q) || normalize(trx.name).includes(q);
       const matchesCategory = revenueCategory === 'All' || trx.cat === revenueCategory;
       const matchesMethod = paymentMethod === 'All' || trx.method === paymentMethod;
       return matchesSearch && matchesCategory && matchesMethod;
     });
-  }, [searchQuery, revenueCategory, paymentMethod]);
+  }, [transactions, searchQuery, revenueCategory, paymentMethod]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const currentPage = Math.min(page, totalPages);
@@ -64,6 +71,20 @@ export default function Transactions() {
     setPage(1);
   };
 
+  const exportCsv = () => {
+    const lines = [
+      ['Transaction ID', 'Date and time', 'Name', 'Category', 'Payment method', 'Amount'],
+      ...filtered.map((trx) => [trx.id, trx.date, trx.name, trx.cat, trx.method, trx.amount]),
+    ].map((row) => row.map(escapeCsvCell).join(','));
+    const blob = new Blob([lines.join('\r\n')], { type: 'text/csv;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'fitnexx-transactions.csv';
+    link.click();
+    URL.revokeObjectURL(url);
+  };
+
   return (
     <div className="space-y-6 transition-colors duration-200">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -73,7 +94,7 @@ export default function Transactions() {
         </div>
 
         <div>
-          <button type="button" className="text-xs font-semibold text-[#0A5C36] dark:text-emerald-400 hover:underline flex items-center space-x-1.5 cursor-pointer bg-white dark:bg-neutral-900 border border-stone-200 dark:border-neutral-800 px-4 py-2 rounded-xl shadow-sm transition">
+          <button type="button" onClick={exportCsv} disabled={loading || Boolean(loadError)} className="text-xs font-semibold text-[#0A5C36] dark:text-emerald-400 hover:underline flex items-center space-x-1.5 cursor-pointer bg-white dark:bg-neutral-900 border border-stone-200 dark:border-neutral-800 px-4 py-2 rounded-xl shadow-sm transition disabled:opacity-50">
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
             </svg>
@@ -168,7 +189,7 @@ export default function Transactions() {
               {pageRows.length === 0 && (
                 <tr>
                   <td colSpan={6} className="py-12 text-center text-stone-500 dark:text-neutral-400">
-                    No transactions match your search or filters.
+                    {loading ? 'Loading transactions…' : loadError || 'No transactions match your search or filters.'}
                   </td>
                 </tr>
               )}

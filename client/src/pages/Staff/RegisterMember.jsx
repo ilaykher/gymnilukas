@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import AlertModal from '../../components/AlertModal';
 import FieldError from '../../components/FieldError';
+import { createMember, getPricing } from '../../lib/api';
 import {
   stripDigits,
   digitsOnly,
@@ -30,6 +31,20 @@ export default function RegisterMember() {
   const [paymentMethod, setPaymentMethod] = useState('cash');
   const [refNumber, setRefNumber] = useState('');
   const [alertState, setAlertState] = useState(null);
+  const [prices, setPrices] = useState(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    getPricing({ signal: controller.signal })
+      .then(setPrices)
+      .catch((error) => {
+        if (!controller.signal.aborted) {
+          setAlertState({ type: 'error', title: 'Unable to load prices', message: error.message });
+        }
+      });
+    return () => controller.abort();
+  }, []);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -47,16 +62,34 @@ export default function RegisterMember() {
     setShowPaymentModal(true);
   };
 
-  const handleCompletePayment = (e) => {
+  const handleCompletePayment = async (e) => {
     e.preventDefault();
-    if (!isReferenceValid) return;
-    setShowPaymentModal(false);
-    setAlertState({
-      type: 'success',
-      title: 'Registration Successful',
-      message: `Monthly Membership Registered Successfully for ${formData.fullName || 'Member'}!`,
-      onClose: () => navigate(-1),
-    });
+    if (!isReferenceValid || isSubmitting || !prices) return;
+    setIsSubmitting(true);
+    try {
+      await createMember({
+        fullName: formData.fullName,
+        username: formData.username,
+        contactNumber: formData.contactNumber,
+        address: formData.address,
+        pin: formData.pin,
+        weight: formData.weight,
+        membershipType,
+        paymentMethod,
+        paymentReference: refNumber,
+      });
+      setShowPaymentModal(false);
+      setAlertState({
+        type: 'success',
+        title: 'Registration Successful',
+        message: `Monthly membership registered for ${formData.fullName}.`,
+        onClose: () => navigate(-1),
+      });
+    } catch (error) {
+      setAlertState({ type: 'error', title: 'Registration Failed', message: error.message });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const closeAlert = () => {
@@ -65,7 +98,9 @@ export default function RegisterMember() {
     if (afterClose) afterClose();
   };
 
-  const amountDue = membershipType === 'regular' ? '₱450.00' : '₱350.00';
+  const amountDue = prices
+    ? `₱${Number(membershipType === 'regular' ? prices.regularMonthly : prices.studentMonthly).toFixed(2)}`
+    : 'Loading…';
 
   // All fields are required except weight.
   const isFormValid =
@@ -205,7 +240,7 @@ export default function RegisterMember() {
 
             <button
               type="submit"
-              disabled={!isFormValid}
+              disabled={!isFormValid || !prices}
               className="px-8 py-3.5 bg-[#0A5C36] hover:bg-[#074729] text-white rounded-xl text-sm font-bold shadow-md transition flex items-center space-x-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-[#0A5C36]"
             >
               <span>Register</span>
@@ -236,11 +271,11 @@ export default function RegisterMember() {
             <div className="bg-stone-50 dark:bg-neutral-800/60 rounded-2xl p-3 mb-4 border border-stone-200 dark:border-neutral-700 text-xs space-y-1">
               <div className="flex justify-between">
                 <span className="text-stone-400 dark:text-neutral-400 font-bold">Member Name</span>
-                <span className="font-bold text-stone-800 dark:text-white">{formData.fullName || 'Julia Dizon'}</span>
+                <span className="font-bold text-stone-800 dark:text-white">{formData.fullName}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-stone-400 dark:text-neutral-400 font-bold">Username</span>
-                <span className="font-bold text-stone-800 dark:text-white">@{formData.username || 'juliadizon123'}</span>
+                <span className="font-bold text-stone-800 dark:text-white">@{formData.username}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-stone-400 dark:text-neutral-400 font-bold">Plan Term</span>
@@ -276,7 +311,7 @@ export default function RegisterMember() {
                         <p className="text-[10px] text-stone-400 dark:text-neutral-400">Standard full-access membership</p>
                       </div>
                     </div>
-                    <span className="font-extrabold text-xs text-stone-900 dark:text-white">₱450.00</span>
+                    <span className="font-extrabold text-xs text-stone-900 dark:text-white">₱{Number(prices?.regularMonthly || 0).toFixed(2)}</span>
                   </div>
 
                   <div
@@ -305,7 +340,7 @@ export default function RegisterMember() {
                         <p className="text-[10px] text-stone-400 dark:text-neutral-400">Requires valid student ID verification</p>
                       </div>
                     </div>
-                    <span className="font-extrabold text-xs text-stone-900 dark:text-white">₱350.00</span>
+                    <span className="font-extrabold text-xs text-stone-900 dark:text-white">₱{Number(prices?.studentMonthly || 0).toFixed(2)}</span>
                   </div>
                 </div>
               </div>
@@ -391,10 +426,10 @@ export default function RegisterMember() {
 
                 <button
                   type="submit"
-                  disabled={!isReferenceValid}
+                  disabled={!isReferenceValid || isSubmitting}
                   className="w-2/3 py-3 bg-[#0A5C36] hover:bg-[#074729] text-white rounded-xl text-xs font-bold shadow-md transition cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-[#0A5C36]"
                 >
-                  {paymentMethod === 'gcash' ? 'Confirm & Complete' : 'Complete Registration & Pay'}
+                  {isSubmitting ? 'Saving…' : paymentMethod === 'gcash' ? 'Confirm & Complete' : 'Complete Registration & Pay'}
                 </button>
               </div>
             </form>

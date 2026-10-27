@@ -1,7 +1,8 @@
-import React, { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import AlertModal from '../../components/AlertModal';
 import FieldError from '../../components/FieldError';
+import { getEmployees, resetEmployeePassword, updateEmployee } from '../../lib/api';
 import {
   stripDigits,
   isBlank,
@@ -12,18 +13,6 @@ import {
 
 const PAGE_SIZE = 6;
 
-// Mock data (kept in state below so edits update the table)
-const INITIAL_EMPLOYEES = [
-  { id: '#EMP-001', name: 'Sara Jimenez', role: 'Manager', email: 'sara.j@gymnilucas.com', status: 'Active' },
-  { id: '#EMP-042', name: 'Mark Valencia', role: 'Trainer', email: 'm.valencia@gymnilucas.com', status: 'Active' },
-  { id: '#EMP-088', name: 'Elena Reyes', role: 'Front Desk', email: 'elena.r@gymnilucas.com', status: 'Inactive' },
-  { id: '#EMP-102', name: 'Daniel Katigbak', role: 'Trainer', email: 'daniel.k@gymnilucas.com', status: 'Active' },
-  { id: '#EMP-110', name: 'Patricia Lopez', role: 'Front Desk', email: 'patricia.l@gymnilucas.com', status: 'Active' },
-  { id: '#EMP-115', name: 'Rico Mendoza', role: 'Trainer', email: 'rico.m@gymnilucas.com', status: 'Active' },
-  { id: '#EMP-121', name: 'Camille Santos', role: 'Front Desk', email: 'camille.s@gymnilucas.com', status: 'Inactive' },
-  { id: '#EMP-127', name: 'Jerome Bautista', role: 'Manager', email: 'jerome.b@gymnilucas.com', status: 'Active' },
-];
-
 // Lowercase and drop "#", "-" and spaces so "emp 042", "#EMP-042", "042" and "markvalencia" all match.
 const normalize = (value) => value.toLowerCase().replace(/[#\-\s]/g, '');
 
@@ -33,7 +22,10 @@ const modalInputClass =
 export default function Employees() {
   const navigate = useNavigate();
 
-  const [employees, setEmployees] = useState(INITIAL_EMPLOYEES);
+  const [employees, setEmployees] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState('');
+  const [reload, setReload] = useState(0);
   const [searchQuery, setSearchQuery] = useState('');
   const [page, setPage] = useState(1);
   const [alertState, setAlertState] = useState(null);
@@ -46,6 +38,31 @@ export default function Employees() {
   const [showPassword, setShowPassword] = useState(false);
   const [newPassword, setNewPassword] = useState('');
   const [requireChange, setRequireChange] = useState(true);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    getEmployees({ signal: controller.signal })
+      .then((rows) => {
+        setLoadError('');
+        setEmployees(rows.map((employee) => ({
+          id: `#EMP-${String(employee.emp_id).padStart(3, '0')}`,
+          rawId: employee.emp_id,
+          name: employee.emp_name,
+          role: employee.emp_job_title || 'Front-Desk',
+          username: employee.auth_username || employee.emp_email || '',
+          email: employee.emp_email || '',
+          phone: employee.emp_phone_num || '',
+          status: employee.emp_status === 'active' ? 'Active' : 'Inactive',
+        })));
+      })
+      .catch((error) => {
+        if (!controller.signal.aborted) setLoadError(error.message);
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setLoading(false);
+      });
+    return () => controller.abort();
+  }, [reload]);
 
   // Filters instantly on every keystroke by Employee ID or Name.
   const filteredEmployees = useMemo(() => {
@@ -63,24 +80,39 @@ export default function Employees() {
   // ---- Edit staff ----
   const emailError =
     editDraft && editDraft.email && !isValidEmail(editDraft.email) ? 'Enter a valid email address.' : '';
-  const isEditValid = editDraft && !isBlank(editDraft.name) && isValidEmail(editDraft.email);
+  const isEditValid = editDraft &&
+    !isBlank(editDraft.name) &&
+    (/^[a-zA-Z0-9._-]{3,80}$/.test(editDraft.username.trim()) || isValidEmail(editDraft.username.trim())) &&
+    isValidEmail(editDraft.email);
 
-  const handleSaveEdit = (e) => {
+  const handleSaveEdit = async (e) => {
     e.preventDefault();
     if (!isEditValid) return;
-    const saved = { ...editDraft, name: editDraft.name.trim(), email: editDraft.email.trim() };
-    setEmployees((prev) => prev.map((emp) => (emp.id === saved.id ? saved : emp)));
-    setEditDraft(null);
-    setAlertState({
-      type: 'success',
-      title: 'Changes Saved',
-      message: `${saved.name}'s details were updated successfully.`,
-    });
+    const saved = {
+      ...editDraft,
+      name: editDraft.name.trim(),
+      username: editDraft.username.trim(),
+      email: editDraft.email.trim(),
+    };
+    try {
+      await updateEmployee(saved.rawId, {
+        name: saved.name,
+        username: saved.username,
+        email: saved.email,
+        jobTitle: saved.role,
+        isActive: saved.status === 'Active',
+      });
+      setEditDraft(null);
+      setReload((value) => value + 1);
+      setAlertState({ type: 'success', title: 'Changes Saved', message: `${saved.name}'s details were updated.` });
+    } catch (error) {
+      setAlertState({ type: 'error', title: 'Update Failed', message: error.message });
+    }
   };
 
   // ---- Reset password ----
   const openReset = () => {
-    setResetTarget({ id: editDraft.id, name: editDraft.name });
+    setResetTarget({ ...editDraft });
     setEditDraft(null);
     setNewPassword('');
     setShowPassword(false);
@@ -94,18 +126,23 @@ export default function Employees() {
 
   const isPasswordValid = isValidPassword(newPassword);
 
-  const handleResetPassword = (e) => {
+  const handleResetPassword = async (e) => {
     e.preventDefault();
     if (!isPasswordValid) return;
     const name = resetTarget.name;
-    closeReset();
-    setAlertState({
-      type: 'success',
-      title: 'Password Updated',
-      message: requireChange
-        ? `${name}'s password was reset. They will be asked to change it on next login.`
-        : `${name}'s password was reset successfully.`,
-    });
+    try {
+      await resetEmployeePassword(resetTarget.rawId, newPassword, requireChange);
+      closeReset();
+      setAlertState({
+        type: 'success',
+        title: 'Password Updated',
+        message: requireChange
+          ? `${name}'s password was reset. They must change it at next login.`
+          : `${name}'s password was reset successfully.`,
+      });
+    } catch (error) {
+      setAlertState({ type: 'error', title: 'Password Reset Failed', message: error.message });
+    }
   };
 
   return (
@@ -180,7 +217,7 @@ export default function Employees() {
               {pageRows.length === 0 && (
                 <tr>
                   <td colSpan={6} className="py-10 text-center text-stone-500 dark:text-neutral-400">
-                    No employees match your search.
+                    {loading ? 'Loading employees…' : loadError || 'No employees match your search.'}
                   </td>
                 </tr>
               )}
@@ -189,7 +226,7 @@ export default function Employees() {
                   <td className="py-3.5 px-6 font-medium text-stone-600 dark:text-neutral-400">{emp.id}</td>
                   <td className="py-3.5 px-6 font-semibold text-stone-900 dark:text-white">{emp.name}</td>
                   <td className="py-3.5 px-6 text-stone-600 dark:text-neutral-400">{emp.role}</td>
-                  <td className="py-3.5 px-6 text-stone-600 dark:text-neutral-400">{emp.email}</td>
+                  <td className="py-3.5 px-6 text-stone-600 dark:text-neutral-400">{emp.phone || emp.email}</td>
                   <td className="py-3.5 px-6">
                     <span className={`inline-flex px-3 py-1 rounded-full text-xs font-medium ${
                       emp.status === 'Active'
@@ -282,6 +319,22 @@ export default function Employees() {
               </div>
 
               <div>
+                <label htmlFor="edit-username" className="block text-xs font-semibold text-stone-700 dark:text-neutral-300 mb-1.5">Login Username</label>
+                <input
+                  id="edit-username"
+                  type="text"
+                  value={editDraft.username}
+                  onChange={(e) => setEditDraft({ ...editDraft, username: e.target.value })}
+                  required
+                  minLength={3}
+                  maxLength={254}
+                  pattern="(?:[a-zA-Z0-9._-]{3,80}|[^@\s]+@[^@\s]+\.[^@\s]+)"
+                  title="Use 3–80 letters, numbers, periods, underscores, or hyphens, or keep the existing email login."
+                  className={modalInputClass}
+                />
+              </div>
+
+              <div>
                 <label htmlFor="edit-email" className="block text-xs font-semibold text-stone-700 dark:text-neutral-300 mb-1.5">Email Contact</label>
                 <input
                   id="edit-email"
@@ -306,7 +359,7 @@ export default function Employees() {
                 >
                   <option value="Manager" className="bg-white dark:bg-neutral-900">Manager</option>
                   <option value="Trainer" className="bg-white dark:bg-neutral-900">Trainer</option>
-                  <option value="Front Desk" className="bg-white dark:bg-neutral-900">Front Desk</option>
+                  <option value="Front-Desk" className="bg-white dark:bg-neutral-900">Front-Desk</option>
                 </select>
               </div>
 
