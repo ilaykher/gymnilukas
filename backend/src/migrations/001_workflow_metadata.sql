@@ -1,5 +1,3 @@
-BEGIN;
-
 ALTER TABLE members
   ADD COLUMN IF NOT EXISTS mem_username varchar(80),
   ADD COLUMN IF NOT EXISTS mem_pin_hash varchar(100);
@@ -45,5 +43,3 @@ CREATE INDEX IF NOT EXISTS member_attendance_time_in_idx
 
 CREATE INDEX IF NOT EXISTS walk_in_attendance_time_in_idx
   ON walk_in_attendance (wiatd_time_in DESC);
-
-COMMIT;
