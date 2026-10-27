@@ -13,7 +13,7 @@ async function findAccount(username) {
        ea.emp_email,
        ea.emp_status::text AS status
      FROM login_auth la
-     JOIN emp_acc ea ON ea.emp_id = la.emp_id
+     LEFT JOIN emp_acc ea ON ea.emp_id = la.emp_id
      WHERE lower(la.auth_username) = lower($1)
         OR lower(ea.emp_email) = lower($1)
      ORDER BY CASE WHEN lower(la.auth_username) = lower($1) THEN 0 ELSE 1 END

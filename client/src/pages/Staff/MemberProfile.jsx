@@ -1,9 +1,12 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import AlertModal from '../../components/AlertModal';
 import FieldError from '../../components/FieldError';
-import { addMemberWeight, getMember, getPricing, renewMember, resetMemberPin } from '../../lib/api';
+import { addMemberWeight, getMember, getPricing, renewMember, resetMemberPin, uploadMemberProfilePhoto } from '../../lib/api';
 import { digitsOnly, sanitizeAmount, isValidPin, isValidReference } from '../../lib/validators';
+
+const DEFAULT_MEMBER_PHOTO = 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80';
+const MAX_PROFILE_PHOTO_SIZE = 2 * 1024 * 1024;
 
 // Password-style input with an eye button to show / hide the value.
 function PinInput({ id, label, value, onChange, placeholder, error, errorId }) {
@@ -52,6 +55,8 @@ export default function MemberProfile() {
   const [searchParams] = useSearchParams();
   const memberId = searchParams.get('id');
   const [member, setMember] = useState(null);
+  const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
+  const photoInputRef = useRef(null);
   const [pageError, setPageError] = useState('');
   const [prices, setPrices] = useState(null);
   const [loadedMemberId, setLoadedMemberId] = useState(null);
@@ -73,6 +78,32 @@ export default function MemberProfile() {
 
   // Themed replacement for window.alert()
   const [alertState, setAlertState] = useState(null);
+
+  const handleProfilePhotoChange = async (event) => {
+    const input = event.currentTarget;
+    const file = input.files?.[0];
+    input.value = '';
+    if (!file) return;
+    if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
+      setAlertState({ type: 'error', title: 'Unsupported Photo', message: 'Choose a JPG, PNG, or WebP image.' });
+      return;
+    }
+    if (file.size > MAX_PROFILE_PHOTO_SIZE) {
+      setAlertState({ type: 'error', title: 'Photo Too Large', message: 'Choose an image that is 2 MB or smaller.' });
+      return;
+    }
+
+    setIsUploadingPhoto(true);
+    try {
+      const updated = await uploadMemberProfilePhoto(memberId, file);
+      setMember((current) => ({ ...current, mem_profile_photo_url: updated.mem_profile_photo_url }));
+      setAlertState({ type: 'success', title: 'Photo Updated', message: `${member.mem_fullname}'s profile photo was updated.` });
+    } catch (error) {
+      setAlertState({ type: 'error', title: 'Photo Upload Failed', message: error.message });
+    } finally {
+      setIsUploadingPhoto(false);
+    }
+  };
 
   useEffect(() => {
     const controller = new AbortController();
@@ -236,12 +267,36 @@ export default function MemberProfile() {
           
           {/* LEFT COLUMN: Profile Card */}
           <div className="bg-white dark:bg-neutral-900 p-6 rounded-2xl border border-stone-200 dark:border-neutral-800 shadow-sm flex flex-col items-center text-center space-y-4 transition-colors duration-200">
-            <div className="relative">
-              <img 
-                src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80" 
-                alt={member.mem_fullname}
-                className="w-24 h-24 rounded-full object-cover border-4 border-stone-100 dark:border-neutral-800 shadow-sm"
+            <div className="relative flex w-full flex-col items-center text-center">
+              <input
+                ref={photoInputRef}
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                onChange={handleProfilePhotoChange}
+                className="sr-only"
+                tabIndex={-1}
+                aria-hidden="true"
               />
+              <button
+                type="button"
+                onClick={() => photoInputRef.current?.click()}
+                disabled={isUploadingPhoto}
+                aria-label={`Change ${member.mem_fullname}'s profile photo`}
+                className="group relative block cursor-pointer rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0A5C36] focus-visible:ring-offset-2 disabled:cursor-wait"
+              >
+                <img
+                  src={member.mem_profile_photo_url || DEFAULT_MEMBER_PHOTO}
+                  alt=""
+                  className="w-24 h-24 rounded-full object-cover border-4 border-stone-100 dark:border-neutral-800 shadow-sm"
+                />
+                <span className="absolute inset-0 flex items-center justify-center rounded-full bg-black/55 text-xs font-semibold text-white opacity-0 transition group-hover:opacity-100 group-focus-visible:opacity-100">
+                  {isUploadingPhoto ? 'Uploading…' : 'Change photo'}
+                </span>
+              </button>
+              <p className="mt-2 text-xs text-stone-500 dark:text-neutral-400" aria-live="polite">
+                <span className="block">{isUploadingPhoto ? 'Uploading photo…' : 'Click photo to change'}</span>
+                <span className="mt-0.5 block">(JPG, PNG, WebP; max 2 MB)</span>
+              </p>
             </div>
 
             <div>

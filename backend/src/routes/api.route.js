@@ -12,6 +12,12 @@ router.use(requireAuth, requirePasswordChanged);
 router.get('/members', membersController.list);
 router.post('/members', membersController.create);
 router.get('/members/:id', membersController.get);
+router.post(
+  '/members/:id/profile-photo',
+  rateLimit({ limit: 30, windowMs: 15 * 60 * 1000, key: (req) => String(req.user.empId) }),
+  membersController.parseProfilePhotoUpload,
+  membersController.uploadProfilePhoto
+);
 router.post('/members/:id/renewals', membersController.renew);
 router.patch('/members/:id/pin', membersController.resetPin);
 router.post('/members/:id/weights', membersController.addWeight);

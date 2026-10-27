@@ -131,13 +131,18 @@ export default function Members() {
                     <td className="py-4 px-6 font-medium text-stone-600 dark:text-neutral-400">#{member.member_id}</td>
                     
                     <td className="py-4 px-6 flex items-center space-x-3">
-                      <div className="w-8 h-8 rounded-full bg-stone-200 dark:bg-neutral-800 text-stone-700 dark:text-neutral-300 font-bold text-xs flex items-center justify-center">
-                        {(member.mem_fullname || '?').split(' ').map((name) => name[0]).join('')}
-                      </div>
                       <button
                         type="button"
                         onClick={() => navigate(`/member-profile?id=${encodeURIComponent(member.member_id)}`)}
-                        className="font-semibold text-[#0A5C36] dark:text-emerald-400 hover:underline text-left"
+                        aria-label={`View ${member.mem_fullname || 'member'} profile`}
+                        className="w-8 h-8 shrink-0 overflow-hidden rounded-full bg-stone-200 dark:bg-neutral-800 text-stone-700 dark:text-neutral-300 font-bold text-xs flex items-center justify-center cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0A5C36]"
+                      >
+                        {(member.mem_fullname || '?').split(' ').map((name) => name[0]).join('')}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => navigate(`/member-profile?id=${encodeURIComponent(member.member_id)}`)}
+                        className="font-semibold text-[#0A5C36] dark:text-emerald-400 hover:underline text-left cursor-pointer"
                       >
                         {member.mem_fullname}
                       </button>

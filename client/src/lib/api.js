@@ -16,7 +16,8 @@ export function writeSession(session) {
 
 async function request(path, { signal, method = 'GET', body, authenticated = true } = {}) {
   const headers = { Accept: 'application/json' };
-  if (body !== undefined) headers['Content-Type'] = 'application/json';
+  const isFormData = typeof FormData !== 'undefined' && body instanceof FormData;
+  if (body !== undefined && !isFormData) headers['Content-Type'] = 'application/json';
   if (authenticated) {
     const session = readSession();
     if (session?.token) headers.Authorization = `Bearer ${session.token}`;
@@ -25,7 +26,7 @@ async function request(path, { signal, method = 'GET', body, authenticated = tru
   const response = await fetch(`${API_BASE_URL}${path}`, {
     method,
     headers,
-    body: body === undefined ? undefined : JSON.stringify(body),
+    body: body === undefined ? undefined : isFormData ? body : JSON.stringify(body),
     signal,
   });
   const text = await response.text();
@@ -79,6 +80,12 @@ export function getMembers(options) {
 
 export function getMember(memberId, options) {
   return get(`/api/members/${encodeURIComponent(memberId)}`, options).then((result) => result.data);
+}
+
+export function uploadMemberProfilePhoto(memberId, photo) {
+  const body = new FormData();
+  body.append('photo', photo);
+  return post(`/api/members/${encodeURIComponent(memberId)}/profile-photo`, body).then((result) => result.data);
 }
 
 export function createMember(member) {

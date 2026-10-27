@@ -15,6 +15,7 @@ async function listEmployees() {
        la.auth_role::text AS auth_role
      FROM emp_acc ea
      LEFT JOIN login_auth la ON la.emp_id = ea.emp_id
+     WHERE la.auth_role::text IS DISTINCT FROM 'admin'
      ORDER BY ea.emp_id`
   );
   return result.rows;
@@ -71,13 +72,17 @@ async function updateEmployee(employeeId, employee, actorId) {
     await client.query('SELECT pg_advisory_xact_lock($1)', [847220]);
     await ensureLoginIdentifiersAvailable(client, employee, employeeId);
     const result = await client.query(
-      `UPDATE emp_acc
+      `UPDATE emp_acc ea
        SET emp_name = $2,
            emp_email = $3,
            emp_job_title = $4,
            emp_status = $5::status_enum
-       WHERE emp_id = $1
-       RETURNING emp_id, emp_name, emp_email, emp_phone_num, emp_status::text AS emp_status, emp_job_title`,
+       WHERE ea.emp_id = $1
+         AND NOT EXISTS (
+           SELECT 1 FROM login_auth la
+           WHERE la.emp_id = ea.emp_id AND la.auth_role::text = 'admin'
+         )
+       RETURNING ea.emp_id, ea.emp_name, ea.emp_email, ea.emp_phone_num, ea.emp_status::text AS emp_status, ea.emp_job_title`,
       [employeeId, employee.name, employee.email, employee.jobTitle, employee.isActive ? 'active' : 'inactive']
     );
     if (!result.rowCount) return null;
@@ -98,9 +103,15 @@ async function resetEmployeePassword(employeeId, password, requireChange, actorI
   return dbTransaction(async (client) => {
     const passwordHash = await bcrypt.hash(password, 12);
     const result = await client.query(
-      `UPDATE login_auth
+      `UPDATE login_auth la
        SET auth_password = $2, auth_must_change_password = $3
-       WHERE emp_id = $1 RETURNING account_id`,
+       WHERE la.emp_id = $1
+         AND la.auth_role::text = 'employee'
+         AND NOT EXISTS (
+           SELECT 1 FROM login_auth admin
+           WHERE admin.emp_id = la.emp_id AND admin.auth_role::text = 'admin'
+         )
+       RETURNING la.account_id`,
       [employeeId, passwordHash, requireChange]
     );
     if (!result.rowCount) return false;

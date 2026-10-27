@@ -1,7 +1,9 @@
 const bcrypt = require('bcrypt');
 const membersModel = require('../models/members.model');
+const cloudinary = require('../config/cloudinary');
 const ApiError = require('../utils/apiError');
 const asyncHandler = require('../utils/asyncHandler');
+const multer = require('multer');
 const {
   requiredString,
   validPhone,
@@ -16,6 +18,39 @@ const parseId = (value) => {
   return id;
 };
 
+const MAX_PROFILE_PHOTO_SIZE = 2 * 1024 * 1024;
+const allowedPhotoTypes = new Set(['image/jpeg', 'image/png', 'image/webp']);
+const uploadProfilePhotoFile = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: MAX_PROFILE_PHOTO_SIZE, files: 1, fields: 0, parts: 1 },
+  fileFilter(req, file, callback) {
+    if (!allowedPhotoTypes.has(file.mimetype)) {
+      return callback(new ApiError(400, 'Upload a JPG, PNG, or WebP image.'));
+    }
+    return callback(null, true);
+  },
+}).single('photo');
+
+const parseProfilePhotoUpload = (req, res, next) => {
+  uploadProfilePhotoFile(req, res, (error) => {
+    if (error instanceof multer.MulterError) {
+      const tooLarge = error.code === 'LIMIT_FILE_SIZE';
+      return next(new ApiError(tooLarge ? 413 : 400, tooLarge
+        ? 'Photo must be 2 MB or smaller.'
+        : 'Upload a single photo file.'));
+    }
+    return next(error);
+  });
+};
+
+function hasValidPhotoSignature(file) {
+  const bytes = file.buffer;
+  if (file.mimetype === 'image/jpeg') return bytes.length >= 3 && bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff;
+  if (file.mimetype === 'image/png') return bytes.subarray(0, 8).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]));
+  return file.mimetype === 'image/webp' && bytes.length >= 12 &&
+    bytes.toString('ascii', 0, 4) === 'RIFF' && bytes.toString('ascii', 8, 12) === 'WEBP';
+}
+
 const list = asyncHandler(async (req, res) => {
   const members = await membersModel.listMembers();
   res.json({ success: true, count: members.length, data: members });
@@ -23,6 +58,20 @@ const list = asyncHandler(async (req, res) => {
 
 const get = asyncHandler(async (req, res) => {
   const member = await membersModel.getMember(parseId(req.params.id));
+  if (!member) throw new ApiError(404, 'Member not found.');
+  res.json({ success: true, data: member });
+});
+
+const uploadProfilePhoto = asyncHandler(async (req, res) => {
+  const memberId = parseId(req.params.id);
+  if (!req.file) throw new ApiError(400, 'Choose a JPG, PNG, or WebP photo to upload.');
+  if (!hasValidPhotoSignature(req.file)) {
+    throw new ApiError(400, 'The uploaded file is not a valid JPG, PNG, or WebP image.');
+  }
+  if (!await membersModel.memberExists(memberId)) throw new ApiError(404, 'Member not found.');
+
+  const photoUrl = await cloudinary.uploadMemberProfilePhoto(req.file.buffer, memberId);
+  const member = await membersModel.updateProfilePhoto(memberId, photoUrl, req.user.empId);
   if (!member) throw new ApiError(404, 'Member not found.');
   res.json({ success: true, data: member });
 });
@@ -120,4 +169,15 @@ const addWeight = asyncHandler(async (req, res) => {
   res.status(201).json({ success: true, data: record });
 });
 
-module.exports = { list, get, create, checkIn, walkIn, renew, resetPin, addWeight };
+module.exports = {
+  list,
+  get,
+  create,
+  checkIn,
+  walkIn,
+  renew,
+  resetPin,
+  addWeight,
+  parseProfilePhotoUpload,
+  uploadProfilePhoto,
+};

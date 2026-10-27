@@ -21,6 +21,7 @@ const MEMBER_FIELDS = `
   m.member_id,
   m.mem_fullname,
   m.mem_username,
+  m.mem_profile_photo_url,
   m.mem_contact_num,
   m.mem_address,
   m.mem_status::text AS mem_status,
@@ -81,6 +82,29 @@ async function getMember(memberId) {
   } finally {
     client.release();
   }
+}
+
+async function memberExists(memberId) {
+  const result = await pool.query('SELECT 1 FROM members WHERE member_id = $1', [memberId]);
+  return result.rowCount > 0;
+}
+
+async function updateProfilePhoto(memberId, photoUrl, actorId) {
+  return dbTransaction(async (client) => {
+    const result = await client.query(
+      `UPDATE members SET mem_profile_photo_url = $2
+       WHERE member_id = $1
+       RETURNING member_id, mem_profile_photo_url`,
+      [memberId, photoUrl]
+    );
+    if (!result.rowCount) return null;
+    await client.query(
+      `INSERT INTO activity_logs (actor_emp_id, activity_action, entity_type, entity_id)
+       VALUES ($1, 'member.profile_photo_updated', 'member', $2)`,
+      [actorId, memberId]
+    );
+    return result.rows[0];
+  });
 }
 
 async function createMember(input, actorId) {
@@ -301,6 +325,8 @@ async function addWeight(memberId, weightKg, actorId) {
 module.exports = {
   listMembers,
   getMember,
+  memberExists,
+  updateProfilePhoto,
   createMember,
   findMemberForCheckIn,
   recordCheckIn,
