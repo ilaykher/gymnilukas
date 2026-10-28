@@ -649,11 +649,11 @@ export default function AdminDashboard() {
   };
 
   return (
-    <div className="min-h-screen bg-stone-100 dark:bg-neutral-950 flex font-sans transition-colors duration-200">
+    <div className="dashboard-shell min-h-screen bg-stone-100 dark:bg-neutral-950 flex font-sans transition-colors duration-200">
       <AdminSidebar />
 
-      <div className="flex-1 flex flex-col min-w-0">
-        <header className="bg-white dark:bg-neutral-900 border-b border-stone-200 dark:border-neutral-800 h-16 flex items-center justify-between px-8 relative z-20 transition-colors duration-200">
+      <div className="dashboard-content flex-1 flex flex-col min-w-0">
+        <header className="dashboard-header bg-white dark:bg-neutral-900 border-b border-stone-200 dark:border-neutral-800 h-16 flex items-center justify-between px-8 relative z-20 transition-colors duration-200">
           <span className="font-semibold text-stone-800 dark:text-neutral-200 text-sm">Gym Management</span>
 
           <div className="relative" ref={dropdownRef}>
@@ -695,7 +695,7 @@ export default function AdminDashboard() {
           </div>
         </header>
 
-        <main className="p-8 max-w-6xl w-full mx-auto flex-1">
+        <main className="dashboard-main p-8 max-w-6xl w-full min-w-0 mx-auto flex-1">
           <Routes>
             <Route index element={<AdminReportsView />} />
             <Route path="employees" element={<Employees />} />

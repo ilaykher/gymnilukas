@@ -38,6 +38,24 @@ html.dark body {
   min-height: 100vh;
 }
 
+/* Keep shared dashboard shells and media inside the viewport on small screens. */
+img, video, svg { max-width: 100%; }
+.dashboard-sidebar-menu { display: flex; flex: 1; flex-direction: column; justify-content: space-between; }
+.dashboard-shell { min-width: 0; }
+
+@media (max-width: 767px) {
+  .dashboard-shell { flex-direction: column; }
+  .dashboard-sidebar { width: 100%; height: auto; position: sticky; z-index: 30; }
+  .dashboard-content { width: 100%; }
+  .dashboard-sidebar-menu:not(.is-open) { display: none; }
+  .dashboard-sidebar-menu.is-open { display: block; }
+  .dashboard-sidebar-menu { max-height: calc(100dvh - 4rem); overflow-y: auto; }
+  .dashboard-sidebar-menu > div:last-child { padding-bottom: 1rem; }
+  .dashboard-main { padding: 1rem !important; }
+  .dashboard-header { padding-inline: 1rem !important; }
+  main, section, article { min-width: 0; }
+}
+
 /* Global dark-mode defaults for common form controls */
 html.dark input,
 html.dark select,

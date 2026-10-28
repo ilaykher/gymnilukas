@@ -176,6 +176,7 @@ export default function Sidebar({ isOnBreak = false }) {
   const navigate = useNavigate();
   const { signOut } = useAuth();
   const [isLogoutOpen, setIsLogoutOpen] = useState(false);
+  const [mobileOpen, setMobileOpen] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [logoutError, setLogoutError] = useState('');
   const isActive = (path) => location.pathname === path;
@@ -198,7 +199,14 @@ export default function Sidebar({ isOnBreak = false }) {
 
   return (
     // sticky + h-screen keeps the sidebar locked in place while the page content scrolls
-    <aside className="w-64 sticky top-0 h-screen self-start bg-[#0A5C36] dark:bg-neutral-900 text-white flex flex-col justify-between select-none shrink-0 border-r border-transparent dark:border-neutral-800 transition-colors duration-200">
+    <aside className="dashboard-sidebar w-64 sticky top-0 h-screen self-start bg-[#0A5C36] dark:bg-neutral-900 text-white flex flex-col justify-between select-none shrink-0 border-r border-transparent dark:border-neutral-800 transition-colors duration-200">
+      <div className="p-4 flex items-center justify-between md:hidden">
+        <span className="font-bold">Gym ni Lucas</span>
+        <button type="button" aria-expanded={mobileOpen} aria-controls="staff-mobile-nav" onClick={() => setMobileOpen((open) => !open)} className="rounded-lg p-2 hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white" aria-label={mobileOpen ? 'Close navigation' : 'Open navigation'}>
+          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d={mobileOpen ? 'M6 18L18 6M6 6l12 12' : 'M4 6h16M4 12h16M4 18h16'} /></svg>
+        </button>
+      </div>
+      <div id="staff-mobile-nav" className={`dashboard-sidebar-menu ${mobileOpen ? 'is-open' : ''}`}>
       <div className="min-h-0 overflow-y-auto">
         <div className="p-6 flex items-center space-x-3 border-b border-[#0f7a4a] dark:border-neutral-800">
           <div className="w-10 h-10 rounded-xl overflow-hidden bg-white/10 flex items-center justify-center shrink-0 border border-white/20 shadow-sm">
@@ -230,6 +238,7 @@ export default function Sidebar({ isOnBreak = false }) {
           disabled={isOnBreak}
           onClick={() => setIsLogoutOpen(true)}
         />
+      </div>
       </div>
 
       {isLogoutOpen && (
